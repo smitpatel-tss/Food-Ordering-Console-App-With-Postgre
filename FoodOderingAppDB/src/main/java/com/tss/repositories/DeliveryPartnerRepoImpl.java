@@ -101,8 +101,6 @@ public class DeliveryPartnerRepoImpl implements DeliveryPartnerRepo {
             String innerSql = "SELECT fi.name AS item_name, fi.price, c.name AS cuisine_name, fi.quantity FROM order_items oi JOIN food_item fi USING(food_item_id) JOIN cuisine c USING(cuisine_id) WHERE order_id=?";
             PreparedStatement innerPs = connection.prepareStatement(innerSql);
 
-
-
             while (resultSet.next()) {
                 long orderId = resultSet.getLong("order_id");
                 innerPs.setLong(1, orderId);
@@ -141,5 +139,127 @@ public class DeliveryPartnerRepoImpl implements DeliveryPartnerRepo {
             System.out.println(e.getMessage());
         }
         return orders;
+    }
+
+    @Override
+    public void completeOrder(long deliveryPartnerId, long orderId) {
+        try{
+            String sql="UPDATE orders SET status='DELIVERED' WHERE order_id=?";
+            PreparedStatement statement=connection.prepareStatement(sql);
+            statement.setLong(1,orderId);
+
+            statement.executeUpdate();
+
+            String sql1="UPDATE delivery_partner SET is_available=? WHERE user_id=?";
+            PreparedStatement statement1= connection.prepareStatement(sql1);
+            statement1.setBoolean(1,true);
+            statement1.setLong(2,deliveryPartnerId);
+            statement1.executeUpdate();
+
+        }catch (SQLException e){
+            System.out.println(e.getMessage());
+        }
+    }
+
+    public void assignOrder() {
+
+        try {
+
+            connection.setAutoCommit(false);
+
+            String sql = """
+            SELECT o.order_id
+            FROM orders o
+            LEFT JOIN order_assignment oa USING (order_id)
+            WHERE o.status = 'ACCEPTED' AND oa.order_id IS NULL
+            ORDER BY o.placed_at
+            LIMIT 1
+            FOR UPDATE SKIP LOCKED
+            """;
+
+            Long orderId = null;
+
+            try (PreparedStatement statement = connection.prepareStatement(sql);
+                 ResultSet resultSet = statement.executeQuery()) {
+
+                if (resultSet.next()) {
+                    orderId = resultSet.getLong("order_id");
+                }
+            }
+
+            if (orderId == null) {
+                connection.rollback();
+                return;
+            }
+
+            String sql1 = """
+            SELECT user_id
+            FROM delivery_partner
+            WHERE is_available = true AND is_active = true
+            ORDER BY last_delivery_at
+            LIMIT 1
+            FOR UPDATE SKIP LOCKED
+            """;
+
+            Long deliveryPartnerId = null;
+
+            try (PreparedStatement statement1 = connection.prepareStatement(sql1);
+                 ResultSet resultSet1 = statement1.executeQuery()) {
+
+                if (resultSet1.next()) {
+                    deliveryPartnerId = resultSet1.getLong("user_id");
+                }
+            }
+
+            if (deliveryPartnerId == null) {
+                connection.rollback();
+                return;
+            }
+
+            String sql2 = """
+            INSERT INTO order_assignment(order_id, delivery_partner_id)
+            VALUES (?, ?)
+            """;
+
+            try (PreparedStatement statement2 = connection.prepareStatement(sql2)) {
+                statement2.setLong(1, orderId);
+                statement2.setLong(2, deliveryPartnerId);
+                statement2.executeUpdate();
+            }
+
+            String sql3 = """
+            UPDATE delivery_partner
+            SET is_available = false
+            WHERE user_id = ?
+            """;
+
+            try (PreparedStatement statement3 = connection.prepareStatement(sql3)) {
+                statement3.setLong(1, deliveryPartnerId);
+                statement3.executeUpdate();
+            }
+
+            String sql4 = """
+            UPDATE orders
+            SET status = 'OUT_FOR_DELIVERY'
+            WHERE order_id = ?
+            """;
+
+            try (PreparedStatement statement4 = connection.prepareStatement(sql4)) {
+                statement4.setLong(1, orderId);
+                statement4.executeUpdate();
+            }
+
+            connection.commit();
+
+        } catch (SQLException e) {
+
+            try {
+                connection.rollback();
+            } catch (SQLException ex) {
+                System.out.println(ex.getMessage());
+            }
+
+            System.out.println(e.getMessage());
+        }
     }
 }

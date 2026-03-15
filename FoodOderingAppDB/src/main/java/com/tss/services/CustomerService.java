@@ -194,7 +194,7 @@ public class CustomerService {
         if (!Validate.validateYesNo()) {
             return;
         }
-        notificationService.sendNotification(userRepository.getAdmin().getId(), message, customer.getName());
+        notificationService.sendNotification(userRepository.getAdmin().getId(), message, UserType.CUSTOMER);
         System.out.println("Message Sent...");
     }
 

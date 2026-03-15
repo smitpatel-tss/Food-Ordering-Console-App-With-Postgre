@@ -2,6 +2,7 @@ package com.tss.services;
 
 import com.tss.model.Order;
 import com.tss.model.users.DeliveryPartner;
+import com.tss.model.users.UserType;
 import com.tss.repositories.UserRepository;
 
 import java.util.LinkedList;
@@ -38,7 +39,7 @@ public class DeliveryPartnerManager {
         notificationService.sendNotification(
                 deliveryPartners.peek().getId(),
                 "New order is Assigned to you... Order id: " + order.getOrderId(),
-                "ADMIN"
+                UserType.ADMIN
         );
 
         order.setDeliveryPartner(deliveryPartners.poll());

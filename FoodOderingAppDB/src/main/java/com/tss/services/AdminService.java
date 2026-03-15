@@ -188,7 +188,7 @@ public class AdminService {
         if (!confirmation) {
             return;
         }
-        notificationService.broadcastDeliveryPartnerNotification(message, "ADMIN");
+        notificationService.broadcastDeliveryPartnerNotification(message, UserType.ADMIN);
         System.out.println("Notification sent...");
     }
 
@@ -205,7 +205,7 @@ public class AdminService {
         if (!confirmation) {
             return;
         }
-        notificationService.broadcastCustomerNotification(message, "ADMIN");
+        notificationService.broadcastCustomerNotification(message, UserType.ADMIN);
         System.out.println("Notification sent...");
     }
 

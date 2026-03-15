@@ -1,6 +1,7 @@
 package com.tss.services;
 
 import com.tss.model.*;
+import com.tss.model.users.UserType;
 import com.tss.payments.PaymentMode;
 import com.tss.repositories.OrderRepository;
 
@@ -29,7 +30,7 @@ public class OrderService {
         notificationService.sendNotification(
                 newOrder.getCustomerId(),
                 "Your Order Is Accepted... Order id: " + newOrder.getOrderId(),
-                "ADMIN"
+                UserType.ADMIN
         );
         return newOrder;
     }

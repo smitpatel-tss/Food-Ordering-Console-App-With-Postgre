@@ -6,6 +6,7 @@ import com.tss.model.Order;
 import com.tss.model.OrderStatus;
 import com.tss.model.users.DeliveryPartner;
 import com.tss.model.users.User;
+import com.tss.model.users.UserType;
 import com.tss.repositories.OrderRepository;
 import com.tss.repositories.UserRepository;
 import com.tss.utils.Validate;
@@ -81,7 +82,7 @@ public class DeliveryPartnerService {
         notificationService.sendNotification(
                 confirmOrder.getCustomerId(),
                 "Your Order Is Delivered... Order id: " + confirmOrder.getOrderId(),
-                "DELIVERY PARTNER"
+                UserType.DELIVERY_PARTNER
         );
         System.out.println("Order Delivered...");
 
@@ -107,7 +108,7 @@ public class DeliveryPartnerService {
         if (!Validate.validateYesNo()) {
             return;
         }
-        notificationService.sendNotification(userRepository.getAdmin().getId(), message, "DELIVERY PARTNER: " + deliveryPartner.getName());
+        notificationService.sendNotification(userRepository.getAdmin().getId(), message,  UserType.DELIVERY_PARTNER);
         System.out.println("Message sent...");
     }
 }

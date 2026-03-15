@@ -9,4 +9,5 @@ public interface DeliveryPartnerRepo {
     List<DeliveryPartner> getAllDeliveryPartners();
     void addNewDeliveryPartner(DeliveryPartner deliveryPartner);
     List<Order> pendingOrders(long deliveryPartnerId);
+    void completeOrder(long deliveryPartnerId, long orderId);
 }

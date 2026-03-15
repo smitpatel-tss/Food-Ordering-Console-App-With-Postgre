@@ -2,6 +2,7 @@ package com.tss.services;
 
 import com.tss.model.Order;
 import com.tss.model.OrderStatus;
+import com.tss.model.users.UserType;
 
 import java.util.LinkedList;
 import java.util.Queue;
@@ -38,7 +39,7 @@ public class OrderManager {
                 notificationService.sendNotification(
                         currentOrder.getCustomerId(),
                         "Your Order Is Out For Delivery... Order id: " + currentOrder.getOrderId(),
-                        "RESTAURANT"
+                        UserType.ADMIN
                 );
                 deliveryPartnerManager.assignOrder(currentOrder);
             }

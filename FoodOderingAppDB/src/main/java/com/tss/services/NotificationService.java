@@ -3,6 +3,7 @@ package com.tss.services;
 import com.tss.exceptions.UserNotFoundException;
 import com.tss.model.Notification;
 import com.tss.model.users.User;
+import com.tss.model.users.UserType;
 import com.tss.repositories.NotificationRepository;
 import com.tss.repositories.UserRepository;
 
@@ -28,8 +29,8 @@ public class NotificationService {
         return InstanceContainer.obj;
     }
 
-    public void sendNotification(long userId, String message, String from) {
-        Notification notification = new Notification(message, userId, from);
+    public void sendNotification(long userId, String message, UserType receiver) {
+        Notification notification = new Notification(message, userId, receiver);
         notificationRepository.addNotification(userId, notification);
     }
 
@@ -41,7 +42,7 @@ public class NotificationService {
         notificationRepository.clearUserNotifications(userId);
     }
 
-    public void broadcastCustomerNotification(String message, String from) {
+    public void broadcastCustomerNotification(String message, UserType from) {
         List<Long> customerIds = new ArrayList<>();
         for (User user : userRepository.getCustomers()) {
             customerIds.add(user.getId());
@@ -55,7 +56,7 @@ public class NotificationService {
         }
     }
 
-    public void broadcastDeliveryPartnerNotification(String message, String from) {
+    public void broadcastDeliveryPartnerNotification(String message, UserType from) {
         List<Long> customerIds = new ArrayList<>();
         for (User user : userRepository.getDeliveryPartners()) {
             customerIds.add(user.getId());

@@ -52,38 +52,38 @@ public class OrderRepoImpl implements OrderRepo {
     @Override
     public void placeNewOrder(Order order) {
 
-        try{
-            String sql1="INSERT INTO price_discount(minimum_amount,discount_percentage) VALUES (?,?) RETURNING discount_id";
-            PreparedStatement statement1=connection.prepareStatement(sql1);
-            statement1.setDouble(1,order.getPossibleDiscount().getMinimumAmount());
-            statement1.setDouble(2,order.getPossibleDiscount().getDiscount());
+        try {
+            String sql1 = "INSERT INTO price_discount(minimum_amount,discount_percentage) VALUES (?,?) RETURNING discount_id";
+            PreparedStatement statement1 = connection.prepareStatement(sql1);
+            statement1.setDouble(1, order.getPossibleDiscount().getMinimumAmount());
+            statement1.setDouble(2, order.getPossibleDiscount().getDiscount());
 
-            ResultSet resultSet1=statement1.executeQuery();
-            long discountId=-1;
-            if(resultSet1.next()){
-                discountId=resultSet1.getLong("discount_id");
+            ResultSet resultSet1 = statement1.executeQuery();
+            long discountId = -1;
+            if (resultSet1.next()) {
+                discountId = resultSet1.getLong("discount_id");
             }
 
-            String sql2="INSERT INTO orders(customer_id,final_amount,payment_mode,discount_id) VALUES(?,?,?,?) RETURNING order_id";
-            PreparedStatement statement2= connection.prepareStatement(sql2);
+            String sql2 = "INSERT INTO orders(customer_id,final_amount,payment_mode,discount_id) VALUES(?,?,?,?) RETURNING order_id";
+            PreparedStatement statement2 = connection.prepareStatement(sql2);
 
-            statement2.setLong(1,order.getCustomerId());
-            statement2.setDouble(2,order.getFinalAmount());
-            statement2.setString(3,order.getPaymentMode().getPaymentModeType().name());
-            statement2.setLong(4,discountId);
+            statement2.setLong(1, order.getCustomerId());
+            statement2.setDouble(2, order.getFinalAmount());
+            statement2.setString(3, order.getPaymentMode().getPaymentModeType().name());
+            statement2.setLong(4, discountId);
 
-            ResultSet resultSet2=statement2.executeQuery();
+            ResultSet resultSet2 = statement2.executeQuery();
 
-            if(resultSet2.next()){
-                long orderId=resultSet2.getLong("order_id");
-                String sql3="INSERT INTO order_items(order_id,food_item_id,quantity,price) VALUES (?,?,?,?)";
-                PreparedStatement statement3=connection.prepareStatement(sql3);
-                statement3.setLong(1,orderId);
+            if (resultSet2.next()) {
+                long orderId = resultSet2.getLong("order_id");
+                String sql3 = "INSERT INTO order_items(order_id,food_item_id,quantity,price) VALUES (?,?,?,?)";
+                PreparedStatement statement3 = connection.prepareStatement(sql3);
+                statement3.setLong(1, orderId);
 
-                for(FoodItem item : order.getCart().getCart().keySet()){
-                    statement3.setLong(2,item.getId());
-                    statement3.setInt(3,order.getCart().getCart().get(item));
-                    statement3.setDouble(4,item.getPrice());
+                for (FoodItem item : order.getCart().getCart().keySet()) {
+                    statement3.setLong(2, item.getId());
+                    statement3.setInt(3, order.getCart().getCart().get(item));
+                    statement3.setDouble(4, item.getPrice());
                     statement3.executeUpdate();
                 }
             }
@@ -109,7 +109,7 @@ public class OrderRepoImpl implements OrderRepo {
                 Discount discount = new PriceDiscount(resultSet.getDouble("minimum_amount"), resultSet.getDouble("discount_percentage"));
 
                 PaymentModeType mode = PaymentModeType.valueOf(resultSet.getString("payment_mode"));
-                PaymentMode payment=mode.create(amount);
+                PaymentMode payment = mode.create(amount);
                 OrderStatus status = OrderStatus.valueOf(resultSet.getString("status"));
 
                 orders.add(
@@ -149,7 +149,7 @@ public class OrderRepoImpl implements OrderRepo {
                 Discount discount = new PriceDiscount(resultSet.getDouble("minimum_amount"), resultSet.getDouble("discount_percentage"));
 
                 PaymentModeType mode = PaymentModeType.valueOf(resultSet.getString("payment_mode"));
-                PaymentMode payment=mode.create(amount);
+                PaymentMode payment = mode.create(amount);
                 OrderStatus status = OrderStatus.valueOf(resultSet.getString("status"));
 
                 orders.add(
@@ -189,7 +189,7 @@ public class OrderRepoImpl implements OrderRepo {
                 Discount discount = new PriceDiscount(resultSet.getDouble("minimum_amount"), resultSet.getDouble("discount_percentage"));
 
                 PaymentModeType mode = PaymentModeType.valueOf(resultSet.getString("payment_mode"));
-                PaymentMode payment=mode.create(amount);
+                PaymentMode payment = mode.create(amount);
                 OrderStatus status = OrderStatus.valueOf(resultSet.getString("status"));
 
                 orders.add(
@@ -217,7 +217,7 @@ public class OrderRepoImpl implements OrderRepo {
         try {
             String sql = "SELECT o.order_id,o.customer_id,o.final_amount,o.status,o.payment_mode, pd.minimum_amount, pd.discount_percentage FROM orders o JOIN price_discount pd USING(discount_id) WHERE o.status=?";
             PreparedStatement ps = connection.prepareStatement(sql);
-            ps.setString(1,orderStatus.toString());
+            ps.setString(1, orderStatus.toString());
             ResultSet resultSet = ps.executeQuery();
 
             while (resultSet.next()) {
@@ -228,7 +228,7 @@ public class OrderRepoImpl implements OrderRepo {
                 Discount discount = new PriceDiscount(resultSet.getDouble("minimum_amount"), resultSet.getDouble("discount_percentage"));
 
                 PaymentModeType mode = PaymentModeType.valueOf(resultSet.getString("payment_mode"));
-                PaymentMode payment=mode.create(amount);
+                PaymentMode payment = mode.create(amount);
                 OrderStatus status = OrderStatus.valueOf(resultSet.getString("status"));
 
                 orders.add(
