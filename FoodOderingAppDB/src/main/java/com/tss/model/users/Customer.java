@@ -16,6 +16,12 @@ public class Customer implements User{
         this.userType=UserType.CUSTOMER;
     }
 
+    public Customer(String name, AccountInfo accountInfo) {
+        this.name = name;
+        this.accountInfo=accountInfo;
+        this.userType=UserType.CUSTOMER;
+    }
+
     public Customer(long id, String name, long phone,String address) {
         this.id = id;
         this.name = name;

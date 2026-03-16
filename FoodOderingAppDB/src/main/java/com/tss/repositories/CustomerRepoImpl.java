@@ -2,7 +2,6 @@ package com.tss.repositories;
 
 import com.tss.config.DBConnection;
 import com.tss.model.users.Customer;
-import com.tss.model.users.DeliveryPartner;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -11,13 +10,14 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 
-public class CustomerRepoImpl implements CustomerRepo{
+public class CustomerRepoImpl implements CustomerRepo {
 
     private Connection connection;
 
     public CustomerRepoImpl() {
         connection = DBConnection.connect();
     }
+
     @Override
     public void addNewCustomer(Customer customer) {
         try {
@@ -40,7 +40,7 @@ public class CustomerRepoImpl implements CustomerRepo{
             PreparedStatement ps2 = connection.prepareStatement(sql2);
 
             ps2.setLong(1, id);
-            ps2.setString(4,customer.getAddress());
+            ps2.setString(2, customer.getAddress());
             ps2.executeUpdate();
             connection.commit();
 
@@ -51,7 +51,7 @@ public class CustomerRepoImpl implements CustomerRepo{
             } catch (SQLException ex) {
                 System.out.println(ex.getMessage());
             }
-        }finally {
+        } finally {
             try {
                 connection.setAutoCommit(true);
             } catch (SQLException e) {
@@ -88,25 +88,41 @@ public class CustomerRepoImpl implements CustomerRepo{
 
     @Override
     public Customer getCustomerById(long id) {
-        Customer customer=null;
+        Customer customer = null;
         try {
             String sql = "select u.user_id,u.name,u.phone,address from customer c join users u using(user_id) WHERE u.user_id=?";
             PreparedStatement ps = connection.prepareStatement(sql);
-            ps.setLong(1,id);
+            ps.setLong(1, id);
             ResultSet resultSet = ps.executeQuery();
 
             while (resultSet.next()) {
-                customer=new Customer(
-                                resultSet.getInt("user_id"),
-                                resultSet.getString("name"),
-                                resultSet.getLong("phone"),
-                                resultSet.getString("address")
-                        );
+                customer = new Customer(
+                        resultSet.getInt("user_id"),
+                        resultSet.getString("name"),
+                        resultSet.getLong("phone"),
+                        resultSet.getString("address")
+                );
             }
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
 
         return customer;
+    }
+
+    @Override
+    public void updateAddress(long userId, String address) {
+
+        try {
+            String sql = "UPDATE customer SET address = ? WHERE user_id = ?";
+            PreparedStatement ps = connection.prepareStatement(sql);
+
+            ps.setString(1, address);
+            ps.setLong(2, userId);
+            ps.executeUpdate();
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
     }
 }

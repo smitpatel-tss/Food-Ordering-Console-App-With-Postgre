@@ -2,11 +2,18 @@ package com.tss.services;
 
 import com.tss.exceptions.UserNotFoundException;
 import com.tss.model.users.*;
-import com.tss.repositories.UserRepository;
+import com.tss.repositories.CustomerRepo;
+import com.tss.repositories.CustomerRepoImpl;
 
 public class AuthenticationService {
 
-    private UserService userService = UserService.getInstance();
+    private UserService userService;
+    private CustomerRepo customerRepo;
+
+    public AuthenticationService() {
+        userService=UserService.getInstance();
+        customerRepo=new CustomerRepoImpl();
+    }
 
     private User authenticate(UserType type) {
         return userService.authenticateUser(type);
@@ -40,7 +47,7 @@ public class AuthenticationService {
 
         User customer = userService.makeUser(UserType.CUSTOMER);
 
-        UserRepository.getInstance().addUser(customer);
+        customerRepo.addNewCustomer((Customer) customer);
 
         System.out.println("✔ New Customer " + customer.getName()
                 + " Registered, with Phone Number " + customer

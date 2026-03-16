@@ -8,8 +8,7 @@ public class Admin implements User{
     private AccountInfo accountInfo;
     private UserType userType;
 
-    public Admin(long id, String name, AccountInfo accountInfo) {
-        this.id = id;
+    public Admin(String name, AccountInfo accountInfo) {
         this.name = name;
         this.accountInfo=accountInfo;
         this.userType=UserType.ADMIN;

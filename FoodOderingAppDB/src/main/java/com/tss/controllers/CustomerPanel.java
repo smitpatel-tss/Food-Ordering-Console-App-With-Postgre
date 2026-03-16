@@ -98,7 +98,13 @@ public class CustomerPanel {
                         System.out.println(e.getMessage());
                     }
                 }
-                case 3 -> customerService.displayCart();
+                case 3 -> {
+                    try{
+                        customerService.displayCart();
+                    }catch (CartEmptyException e){
+                        System.out.println(e.getMessage());
+                    }
+                }
                 case 4 -> {
                     try {
                         customerService.placeOrder();

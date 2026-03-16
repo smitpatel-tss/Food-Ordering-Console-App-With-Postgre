@@ -2,11 +2,9 @@ package com.tss.services;
 
 import com.tss.exceptions.ItemNotFoundException;
 import com.tss.exceptions.UserNotFoundException;
-import com.tss.model.CuisineType;
-import com.tss.model.FoodItem;
+import com.tss.model.*;
 import com.tss.factory.FoodItemFactory;
 import com.tss.factory.UserFactory;
-import com.tss.model.Order;
 import com.tss.model.users.*;
 import com.tss.repositories.*;
 import com.tss.utils.Validate;
@@ -18,32 +16,27 @@ import java.util.Map;
 
 public class AdminService {
     private Admin admin;
-    private static Map<CuisineType, List<FoodItem>> menu = MenuRepository.getMenuItemList();
     private MenuService menuService;
-    private UserRepository userRepository;
-    private DeliveryPartnerManager deliveryPartnerManager;
-    private DiscountService discountService;
-    private OrderRepository orderRepository;
     private UserService userService;
     private NotificationService notificationService;
     private MenuRepo menuRepo;
     private OrderRepo orderRepo;
     private OrderService orderService;
     private DeliveryPartnerRepo deliveryPartnerRepo;
+    private DiscountRepo discountRepo;
+    private CustomerRepo customerRepo;
 
     public AdminService(User admin) {
         this.admin = (Admin) admin;
         this.menuService = MenuService.getInstance();
-        this.userRepository = UserRepository.getInstance();
-        this.deliveryPartnerManager = DeliveryPartnerManager.getInstance();
-        this.discountService = DiscountService.getInstance();
-        this.orderRepository = OrderRepository.getInstance();
         userService = UserService.getInstance();
         notificationService = NotificationService.getInstance();
         menuRepo=new MenuRepoImpl();
         orderRepo=new OrderRepoImpl();
         orderService=OrderService.getInstance();
         deliveryPartnerRepo=new DeliveryPartnerRepoImpl();
+        discountRepo=new DiscountRepoImpl();
+        customerRepo=new CustomerRepoImpl();
     }
 
     public void setAdmin(Admin admin) {
@@ -138,7 +131,7 @@ public class AdminService {
         System.out.println("ADDING NEW DELIVERY PARTNER:");
         User newDeliveryPartner = userService.makeUser(UserType.DELIVERY_PARTNER);
         deliveryPartnerRepo.addNewDeliveryPartner((DeliveryPartner) newDeliveryPartner);
-        deliveryPartnerManager.pushDeliveryPartnerInQueue((DeliveryPartner) newDeliveryPartner);
+        deliveryPartnerRepo.assignOrder();
 
         System.out.println("Delivery Partner " + newDeliveryPartner.getName() + " Added successfully...");
     }
@@ -158,32 +151,43 @@ public class AdminService {
             System.out.println("It's not applicable!");
             return;
         }
-        discountService.addNewDiscount(minimumAmount, discount);
+        discountRepo.addNewPriceDiscount(new PriceDiscount(minimumAmount,discount));
     }
 
     public void showDeliveryPartners() {
-        if (userRepository.getDeliveryPartners().isEmpty()) {
+        List<DeliveryPartner> deliveryPartners=deliveryPartnerRepo.getAllDeliveryPartners();
+        if (deliveryPartners.isEmpty()) {
             System.out.println("No Delivery Partner Found!");
             return;
         }
         System.out.println("DELIVERY PARTNERS:");
-        for (DeliveryPartner deliveryPartner : userRepository.getDeliveryPartners()) {
+        for (DeliveryPartner deliveryPartner : deliveryPartners) {
             System.out.println(deliveryPartner);
         }
     }
 
     public void displayDiscounts() {
         System.out.println("AVAILABLE DISCOUNTS: ");
-        discountService.displayDiscounts();
+        List<Discount> discounts= discountRepo.getAllDiscounts();
+
+        if (discounts.isEmpty()) {
+            System.out.println("No Discounts Currently Available!");
+            return;
+        }
+        for (Discount discount : discounts) {
+            System.out.println(discount.getDescription());
+        }
     }
 
     public void displayAllCustomers() {
-        if (userRepository.getCustomers().isEmpty()) {
+        List<Customer> customers=customerRepo.getAllCustomers();
+
+        if (customers.isEmpty()) {
             System.out.println("No Customer Found!");
             return;
         }
         System.out.println("CUSTOMERS:");
-        for (Customer customer : userRepository.getCustomers()) {
+        for (Customer customer : customers) {
             System.out.println(customer);
         }
     }
@@ -219,23 +223,31 @@ public class AdminService {
     }
 
     public void revenueDetails() {
+        List<Order> orders=orderRepo.getAllOrders();
+        if(orders.isEmpty()){
+            System.out.println("Total Number Of Orders: " + 0);
+            System.out.println("Total Earnings        : " + 0);
+        }
+
         double totalRevenue = 0;
-        for (Order myOrder : orderRepository.getAllOrders()) {
+
+        for (Order myOrder : orders) {
             totalRevenue += myOrder.getFinalAmount();
         }
-        int totalOrders = orderRepository.getAllOrders().size();
+        int totalOrders = orders.size();
 
         System.out.println("Total Number Of Orders: " + totalOrders);
         System.out.println("Total Earnings        : " + totalRevenue);
     }
 
     public void removeItem() {
-        displayMenu();
         System.out.println("REMOVING FOOD ITEM:");
-        if (menu.isEmpty()) {
+        if (menuService.isEmpty()) {
             System.out.println("Menu is Empty!");
             return;
         }
+        menuService.displayMenu();
+
         System.out.print("Enter Item-Id: ");
         long id = Validate.validatePositiveLong();
         if (menuService.removeItem(id)) {
@@ -247,7 +259,7 @@ public class AdminService {
 
     public void removeCuisine() {
         System.out.println("REMOVING CUISINE:");
-        List<CuisineType> cuisineList = new ArrayList<>(menu.keySet());
+        List<CuisineType> cuisineList = menuService.getAllCuisines();
         if (cuisineList.isEmpty()) {
             System.out.println("No Cuisines Available!");
             return;
@@ -267,39 +279,15 @@ public class AdminService {
     }
 
     public void changePassword() {
-        userService.changePassword(admin);
+        userService.changePassword(admin,UserType.ADMIN);
     }
 
     public void changePhoneNumber() {
-        userService.changeNumber(admin);
+        userService.changeNumber(admin, UserType.ADMIN);
     }
 
     public void displayPendingOrders() {
-        orderRepository.displayOrders(orderRepository.getPendingOrders());
+        orderService.displayOrders(orderRepo.getOrderFromStatus(OrderStatus.ACCEPTED));
     }
 
-    public void initializerMenu() {
-
-        CuisineType punjabi = new CuisineType("Punjabi");
-        menu.put(punjabi, new ArrayList<FoodItem>());
-
-        menu.get(punjabi).add(FoodItemFactory.getFoodItemInstance("Paneer Angara", 150.0, punjabi));
-        menu.get(punjabi).add(FoodItemFactory.getFoodItemInstance("Dal Makhani", 180.0, punjabi));
-        menu.get(punjabi).add(FoodItemFactory.getFoodItemInstance("Chhole Bhature", 120.0, punjabi));
-
-
-        CuisineType chinese = new CuisineType("Chinese");
-        menu.put(chinese, new ArrayList<FoodItem>());
-
-        menu.get(chinese).add(FoodItemFactory.getFoodItemInstance("Veg Manchurian", 140.0, chinese));
-        menu.get(chinese).add(FoodItemFactory.getFoodItemInstance("Hakka Noodles", 130.0, chinese));
-        menu.get(chinese).add(FoodItemFactory.getFoodItemInstance("Fried Rice", 120.0, chinese));
-
-
-        CuisineType italian = new CuisineType("Italian");
-        menu.put(italian, new ArrayList<FoodItem>());
-
-        menu.get(italian).add(FoodItemFactory.getFoodItemInstance("Margherita Pizza", 250.0, italian));
-        menu.get(italian).add(FoodItemFactory.getFoodItemInstance("Garlic Bread", 90.0, italian));
-    }
 }

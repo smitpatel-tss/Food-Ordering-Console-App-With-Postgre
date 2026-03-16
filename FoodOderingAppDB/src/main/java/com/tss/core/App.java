@@ -5,8 +5,7 @@ import com.tss.controllers.*;
 import com.tss.factory.UserFactory;
 import com.tss.model.users.Admin;
 import com.tss.model.users.UserType;
-import com.tss.repositories.UserRepository;
-import com.tss.services.AdminService;
+import com.tss.repositories.UserRepoImpl;
 import com.tss.utils.Validate;
 
 public class App {
@@ -50,8 +49,6 @@ public class App {
                 "Smit", UserType.ADMIN,
                 new AccountInfo(7069209810L, "smit1234"));
 
-        UserRepository.getInstance().addUser(admin);
-        new AdminService(admin).initializerMenu();
-
+        new UserRepoImpl().addAdmin(admin);
     }
 }

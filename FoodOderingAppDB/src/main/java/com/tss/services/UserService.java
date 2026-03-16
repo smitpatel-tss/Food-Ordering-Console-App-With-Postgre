@@ -12,14 +12,12 @@ import java.util.List;
 
 public class UserService {
     private UserFactory userFactory;
-    private UserRepository userRepository;
     private NotificationService notificationService;
     private NotificationRepo notificationRepo;
     private UserRepo userRepo;
 
     private UserService() {
         userFactory = new UserFactory();
-        userRepository = UserRepository.getInstance();
         notificationService = NotificationService.getInstance();
         notificationRepo=new NotificationRepoImpl();
         userRepo=new UserRepoImpl();
@@ -101,17 +99,18 @@ public class UserService {
             return;
         }
         user.getAccountInfo().setPassword(newPassword);
+        userRepo.changePassword(user.getId(),newPassword,type);
         System.out.println("✔ Password Changed Successfully.");
     }
 
-    public void changeNumber(User user) {
+    public void changeNumber(User user,UserType type) {
         if (user == null) {
             throw new IllegalArgumentException("User cannot be null");
         }
 
         System.out.print("Enter Phone number: ");
         long number = Validate.validatePhoneNumber();
-        while (!userRepository.canAddNumber(number)) {
+        while (!userRepo.canAddNumber(number,type)) {
             if (user.getAccountInfo().getPhoneNumber()==number) {
                 System.out.println("✖ This number is already linked to your account.");
                 return;
@@ -125,6 +124,7 @@ public class UserService {
             return;
         }
         user.getAccountInfo().setPhoneNumber(number);
+        userRepo.changePhoneNumber(user.getId(),number,type);
         System.out.println("✔ Phone Number Updated Successfully.");
     }
 

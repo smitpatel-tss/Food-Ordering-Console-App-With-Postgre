@@ -10,37 +10,41 @@ import com.tss.model.users.Customer;
 import com.tss.model.users.User;
 import com.tss.model.users.UserType;
 import com.tss.payments.PaymentMode;
-import com.tss.repositories.MenuRepository;
-import com.tss.repositories.OrderRepository;
-import com.tss.repositories.UserRepository;
+import com.tss.repositories.*;
 import com.tss.utils.Validate;
+
+import java.util.List;
 
 
 public class CustomerService {
     private Customer customer;
     private OrderService orderService;
-    private OrderRepository orderRepository;
-    private Cart cart;
     private MenuService menuService;
-    private DiscountService discountService;
     private PaymentService paymentService;
     private InvoiceService invoiceService;
-    private UserRepository userRepository;
     private UserService userService;
     private NotificationService notificationService;
+    private OrderRepo orderRepo;
+    private DeliveryPartnerRepo deliveryPartnerRepo;
+    private DiscountRepo discountRepo;
+    private CustomerRepo customerRepo;
+    private CartRepo cartRepo;
 
     public CustomerService(User customer) {
         this.customer = (Customer) customer;
         orderService = OrderService.getInstance();
-        cart = new Cart();
         menuService = MenuService.getInstance();
-        discountService = DiscountService.getInstance();
         paymentService = new PaymentService();
         invoiceService = new InvoiceService();
-        userRepository = UserRepository.getInstance();
-        orderRepository = OrderRepository.getInstance();
         userService = UserService.getInstance();
         notificationService = NotificationService.getInstance();
+
+        orderRepo=new OrderRepoImpl();
+        orderService=OrderService.getInstance();
+        deliveryPartnerRepo=new DeliveryPartnerRepoImpl();
+        discountRepo=new DiscountRepoImpl();
+        customerRepo=new CustomerRepoImpl();
+        cartRepo=new CartRepoImpl();
     }
 
     public void welcomeDisplay() {
@@ -57,11 +61,12 @@ public class CustomerService {
 
     public void showHistory() {
         System.out.println("HISTORY:");
-        orderRepository.displayOrders(orderRepository.ordersFromCustomerId(customer.getId()));
+
+        orderService.displayOrders(orderRepo.ordersFromCustomerId(customer.getId()));
     }
 
     public void addItemToCart() {
-        if (MenuRepository.isMenuEmpty()) {
+        if (menuService.isEmpty()) {
             System.out.println("Menu is Empty!");
             return;
         }
@@ -76,12 +81,12 @@ public class CustomerService {
         }
         System.out.print("Enter Quantity: ");
         int quantity = Validate.validatePositiveIntNonZero();
-        cart.addItemToCart(item, quantity);
+        cartRepo.addItemToCart(customer.getId(),item.getId(),quantity);
         System.out.println(quantity + " x " + item.getName() + " added to cart...");
     }
 
     public void removeItemFromCart() {
-        if (cart.getCart().isEmpty()) {
+        if (cartRepo.isCartEmpty(customer.getId())) {
             throw new CartEmptyException();
         }
         System.out.print("Enter Item id: ");
@@ -93,6 +98,9 @@ public class CustomerService {
             System.out.println("No Item Found!");
             return;
         }
+
+        Cart cart=cartRepo.getCart(customer.getId());
+
         if (!cart.getCart().containsKey(item)) {
             System.out.println("Item not in cart!");
             return;
@@ -104,17 +112,30 @@ public class CustomerService {
             System.out.print("Enter Valid Quantity! " + cart.getCart().get(item) + " or Less: ");
             quantity = Validate.validatePositiveIntNonZero();
         }
-        cart.removeItemFromCart(item, quantity);
+        cartRepo.removeItemFromCart(customer.getId(),item.getId(),quantity);
         System.out.println(quantity + " x " + item.getName() + " removed from cart...");
     }
 
     public void displayCart() {
-        cart.displayCart();
+
+        if(cartRepo.isCartEmpty(customer.getId())){
+            throw new CartEmptyException();
+        }
+
+        cartRepo.getCart(customer.getId()).displayCart();
     }
 
     public void displayDiscounts() {
         System.out.println("AVAILABLE DISCOUNTS: ");
-        discountService.displayDiscounts();
+        List<Discount> discounts= discountRepo.getAllDiscounts();
+
+        if (discounts.isEmpty()) {
+            System.out.println("No Discounts Currently Available!");
+            return;
+        }
+        for (Discount discount : discounts) {
+            System.out.println(discount.getDescription());
+        }
     }
 
     public void placeOrder() {
@@ -130,9 +151,10 @@ public class CustomerService {
             System.out.println("Enter Your Address:");
             String address = Validate.validateNonEmptyString();
             customer.setAddress(address);
+            customerRepo.updateAddress(customer.getId(),address);
         }
 
-        PaymentMode paymentMode = paymentService.choosePaymentMethod(cart.getTotalCartPrice());
+        PaymentMode paymentMode = paymentService.choosePaymentMethod(cartRepo.calculateCartTotal(customer.getId()));
         if (paymentMode == null) {
             throw new IllegalArgumentException("Payment failed!");
         }
@@ -149,26 +171,21 @@ public class CustomerService {
         System.out.println("Order Placed...");
     }
 
-    public void newCustomerRegister() {
+//    public void newCustomerRegister() {
+//
+//        User customer = userService.makeUser(UserType.CUSTOMER);
+//
+//
+//        System.out.println("✔ New Customer "
+//                + customer.getName()
+//                + " Registered, with Phone Number "
+//                + customer
+//                .getAccountInfo().getPhoneNumber());
+//    }
 
-        User customer = userService.makeUser(UserType.CUSTOMER);
-
-        UserRepository.getInstance().addUser(customer);
-
-        System.out.println("✔ New Customer "
-                + customer.getName()
-                + " Registered, with Phone Number "
-                + customer
-                .getAccountInfo().getPhoneNumber());
-    }
-
-
-    public void emptyTheCart() {
-        cart.emptyTheCart();
-    }
 
     public void displayMenu() {
-        if (MenuRepository.isMenuEmpty()) {
+        if (menuService.isEmpty()) {
             System.out.println("Menu is Empty!");
             return;
         }
@@ -180,11 +197,11 @@ public class CustomerService {
     }
 
     public void changePassword() {
-        userService.changePassword(customer);
+        userService.changePassword(customer,UserType.CUSTOMER);
     }
 
     public void changePhoneNumber() {
-        userService.changeNumber(customer);
+        userService.changeNumber(customer, UserType.CUSTOMER);
     }
 
     public void customerSupport() {
@@ -195,7 +212,7 @@ public class CustomerService {
         if (!Validate.validateYesNo()) {
             return;
         }
-        notificationService.sendNotification(userRepository.getAdmin().getId(), message, UserType.CUSTOMER,UserType.ADMIN);
+        notificationService.sendNotification(message, UserType.CUSTOMER,UserType.ADMIN);
         System.out.println("Message Sent...");
     }
 

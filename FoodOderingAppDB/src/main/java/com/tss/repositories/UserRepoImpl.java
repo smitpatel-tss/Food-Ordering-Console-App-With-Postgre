@@ -208,14 +208,14 @@ public class UserRepoImpl implements UserRepo {
     }
 
     @Override
-    public boolean changePassword(long phone, String newPassword, UserType type) {
+    public boolean changePassword(long userId, String newPassword, UserType type) {
 
-        String sql = "UPDATE users SET password=? WHERE phone=? AND user_type=?";
+        String sql = "UPDATE users SET password=? WHERE user_id=? AND user_type=?";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
 
             ps.setString(1, newPassword);
-            ps.setLong(2, phone);
+            ps.setLong(2, userId);
             ps.setString(3, type.name());
 
             int rows = ps.executeUpdate();
@@ -227,5 +227,49 @@ public class UserRepoImpl implements UserRepo {
         }
 
         return false;
+    }
+
+    @Override
+    public boolean changePhoneNumber(long userId, long newPhone, UserType type) {
+
+        String sql = "UPDATE users SET phone=? WHERE user_id=? AND user_type=?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+
+            ps.setLong(1, newPhone);
+            ps.setLong(2, userId);
+            ps.setString(3, type.name());
+
+            int rows = ps.executeUpdate();
+
+            return rows > 0;
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        return false;
+    }
+
+    public void addAdmin(Admin admin){
+        try{
+            String sql="INSERT INTO users(name,phone,password,user_type) VALUES (?,?,?,?) RETURNING user_id";
+            PreparedStatement statement=connection.prepareStatement(sql);
+            statement.setString(1,admin.getName());
+            statement.setLong(2,admin.getAccountInfo().getPhoneNumber());
+            statement.setString(3,admin.getAccountInfo().getPassword());
+            statement.setString(4,admin.getUserType().name());
+
+            ResultSet resultSet=statement.executeQuery();
+
+            if(resultSet.next()){
+                String sql1="INSERT INTO admin(user_id) VALUES (?)";
+                PreparedStatement statement1=connection.prepareStatement(sql1);
+                statement1.setLong(1,resultSet.getLong("user_id"));
+                statement1.executeUpdate();
+            }
+        }catch (SQLException e){
+            System.out.println(e.getMessage());
+        }
     }
 }

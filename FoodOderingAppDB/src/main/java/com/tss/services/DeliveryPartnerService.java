@@ -1,39 +1,30 @@
 package com.tss.services;
 
 import com.tss.exceptions.OrderNotFoundException;
-import com.tss.exceptions.UserNotFoundException;
 import com.tss.model.Order;
-import com.tss.model.OrderStatus;
 import com.tss.model.users.DeliveryPartner;
 import com.tss.model.users.User;
 import com.tss.model.users.UserType;
-import com.tss.repositories.DeliveryPartnerRepo;
-import com.tss.repositories.DeliveryPartnerRepoImpl;
-import com.tss.repositories.OrderRepository;
-import com.tss.repositories.UserRepository;
+import com.tss.repositories.*;
 import com.tss.utils.Validate;
 
 import java.util.List;
 
 public class DeliveryPartnerService {
     private DeliveryPartner deliveryPartner;
-    private DeliveryPartnerManager deliveryPartnerManager;
-    private OrderManager orderManager;
-    private OrderRepository orderRepository;
     private UserService userService;
     private NotificationService notificationService;
-    private UserRepository userRepository;
     private DeliveryPartnerRepo deliveryPartnerRepo;
+    private OrderService orderService;
+    private OrderRepo orderRepo;
 
     public DeliveryPartnerService(User deliveryPartner) {
         this.deliveryPartner = (DeliveryPartner) deliveryPartner;
-        deliveryPartnerManager = DeliveryPartnerManager.getInstance();
-        orderManager = OrderManager.getOrderManagerInstance();
-        orderRepository = OrderRepository.getInstance();
         userService = UserService.getInstance();
         notificationService = NotificationService.getInstance();
-        userRepository = UserRepository.getInstance();
         deliveryPartnerRepo=new DeliveryPartnerRepoImpl();
+        orderService=OrderService.getInstance();
+        orderRepo=new OrderRepoImpl();
     }
 
     public DeliveryPartner getDeliveryPartner() {
@@ -49,10 +40,11 @@ public class DeliveryPartnerService {
     }
 
     public void printOrdersHistory() {
-        List<Order> orders = orderRepository.ordersFromDeliveryAgentId(deliveryPartner.getId());
+        List<Order> orders = orderRepo.ordersFromDeliveryAgentId(deliveryPartner.getId());
 
         System.out.println("ORDER HISTORY:");
-        orderRepository.displayOrders(orders);
+        orderService.displayOrders(orders);
+
     }
 
 
@@ -64,7 +56,7 @@ public class DeliveryPartnerService {
             return;
         }
         System.out.println("CURRENT ORDERS: ");
-        orderRepository.displayOrders(pendingOrders);
+        orderService.displayOrders(pendingOrders);
         System.out.print("\nType Order Id to Confirm Delivery: ");
         long orderId = Validate.validatePositiveLong();
 
@@ -95,11 +87,11 @@ public class DeliveryPartnerService {
     }
 
     public void changePassword() {
-        userService.changePassword(deliveryPartner);
+        userService.changePassword(deliveryPartner, UserType.DELIVERY_PARTNER);
     }
 
     public void changePhoneNumber() {
-        userService.changeNumber(deliveryPartner);
+        userService.changeNumber(deliveryPartner, UserType.DELIVERY_PARTNER);
     }
 
     public void reportIssue() {
@@ -109,7 +101,7 @@ public class DeliveryPartnerService {
         if (!Validate.validateYesNo()) {
             return;
         }
-        notificationService.sendNotification(userRepository.getAdmin().getId(), message,  UserType.DELIVERY_PARTNER, UserType.ADMIN);
+        notificationService.sendNotification(message,  UserType.DELIVERY_PARTNER, UserType.ADMIN);
         System.out.println("Message sent...");
     }
 }

@@ -10,7 +10,6 @@ import com.tss.repositories.*;
 import java.util.List;
 
 public class OrderService {
-    private DiscountService discountService;
     private NotificationService notificationService;
     private OrderRepo orderRepo;
     private DeliveryPartnerRepo deliveryPartnerRepo;
@@ -19,7 +18,6 @@ public class OrderService {
 
 
     public OrderService() {
-        discountService = DiscountService.getInstance();
         notificationService = NotificationService.getInstance();
         orderRepo=new OrderRepoImpl();
         deliveryPartnerRepo=new DeliveryPartnerRepoImpl();

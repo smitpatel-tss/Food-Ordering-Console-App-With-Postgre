@@ -1,15 +1,10 @@
 package com.tss.services;
 
-import com.tss.exceptions.UserNotFoundException;
 import com.tss.model.Notification;
-import com.tss.model.users.User;
 import com.tss.model.users.UserType;
 import com.tss.repositories.NotificationRepo;
 import com.tss.repositories.NotificationRepoImpl;
-import com.tss.repositories.NotificationRepository;
-import com.tss.repositories.UserRepository;
 
-import java.util.ArrayList;
 import java.util.List;
 
 public class NotificationService {
@@ -31,6 +26,12 @@ public class NotificationService {
 
     public void sendNotification(long userId, String message, UserType sender,UserType receiver) {
         Notification notification = new Notification(userId,message,sender, receiver);
+
+        notificationRepo.sendNotification(notification);
+    }
+
+    public void sendNotification(String message, UserType sender,UserType receiver) {
+        Notification notification = new Notification(message,sender, receiver);
 
         notificationRepo.sendNotification(notification);
     }

@@ -19,6 +19,14 @@ public class DeliveryPartner implements User{
         this.userType=UserType.DELIVERY_PARTNER;
     }
 
+    public DeliveryPartner(String name, AccountInfo accountInfo) {
+        this.name = name;
+        this.accountInfo=accountInfo;
+        this.is_active=true;
+        this.is_available=true;
+        this.userType=UserType.DELIVERY_PARTNER;
+    }
+
     public DeliveryPartner(String name, long phoneNumber, String password) {
         this.id = id;
         this.name = name;

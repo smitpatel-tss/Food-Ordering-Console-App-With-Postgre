@@ -1,15 +1,11 @@
 package com.tss.services;
 
 import com.tss.model.FoodItem;
-import com.tss.model.Menu;
 import com.tss.model.CuisineType;
 import com.tss.repositories.MenuRepo;
 import com.tss.repositories.MenuRepoImpl;
-import com.tss.repositories.MenuRepository;
 
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 
 public class MenuService {

@@ -241,6 +241,40 @@ public class CartRepoImpl implements CartRepo {
     }
 
     @Override
+    public double calculateCartTotal(long userId) {
+
+        try {
+
+            Long cartId = getCartIdByUserId(userId);
+
+            if (cartId == null) {
+                return 0;
+            }
+
+            String query = """
+            SELECT SUM(f.price * ci.quantity) AS total
+            FROM cart_items ci
+            JOIN food_item f ON ci.food_item_id = f.food_item_id
+            WHERE ci.cart_id = ?
+        """;
+
+            PreparedStatement ps = connection.prepareStatement(query);
+            ps.setLong(1, cartId);
+
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                return rs.getDouble("total");
+            }
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        return 0;
+    }
+
+    @Override
     public boolean isCartEmpty(long userId) {
         try {
 
