@@ -50,9 +50,9 @@ public class UserRepoImpl implements UserRepo {
         String table = "";
 
         switch (type) {
-            case CUSTOMER -> table = "customers";
+            case CUSTOMER -> table = "customer";
             case DELIVERY_PARTNER -> table = "delivery_partner";
-            case ADMIN -> table = "admins";
+            case ADMIN -> table = "admin";
         }
 
         String sql = "SELECT 1 FROM " + table + " WHERE phone=? AND password=? LIMIT 1";
