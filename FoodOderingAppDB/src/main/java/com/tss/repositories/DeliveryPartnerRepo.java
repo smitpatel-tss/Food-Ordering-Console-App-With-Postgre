@@ -10,4 +10,6 @@ public interface DeliveryPartnerRepo {
     void addNewDeliveryPartner(DeliveryPartner deliveryPartner);
     List<Order> pendingOrders(long deliveryPartnerId);
     void completeOrder(long deliveryPartnerId, long orderId);
+    void assignOrder();
+    boolean isDeliveryPartnersEmpty();
 }

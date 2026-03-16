@@ -3,17 +3,20 @@ package com.tss.services;
 import com.tss.model.FoodItem;
 import com.tss.model.Menu;
 import com.tss.model.CuisineType;
+import com.tss.repositories.MenuRepo;
+import com.tss.repositories.MenuRepoImpl;
 import com.tss.repositories.MenuRepository;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
 public class MenuService {
-    private Menu menu;
+    private MenuRepo menuRepo;
 
     private MenuService() {
-        menu = new Menu(MenuRepository.getMenuItemList());
+        menuRepo=new MenuRepoImpl();
     }
 
     private static class InstanceContainer {
@@ -25,12 +28,13 @@ public class MenuService {
     }
 
     public void displayMenu() {
+        HashMap<CuisineType, List<FoodItem>> menu=menuRepo.getMenu();
 
         System.out.println("\n======================== MENU ========================");
 
-        for (CuisineType cuisine : menu.getMenu().keySet()) {
+        for (CuisineType cuisine : menu.keySet()) {
 
-            List<FoodItem> foodItems = menu.getMenu().get(cuisine);
+            List<FoodItem> foodItems = menu.get(cuisine);
             if (foodItems == null || foodItems.isEmpty()) continue;
 
             System.out.println("\n[" + cuisine.getName().toUpperCase() + "]");
@@ -51,45 +55,38 @@ public class MenuService {
     }
 
     public FoodItem getItemFromId(long id) {
-        for (CuisineType cuisine : menu.getMenu().keySet()) {
-            List<FoodItem> foodItems = menu.getMenu().get(cuisine);
-
-            for (FoodItem items : foodItems) {
-                if (items.getId() == id) {
-                    return items;
-                }
-            }
-        }
-        return null;
+        FoodItem item=menuRepo.getItemFromId(id);
+        return item;
     }
 
     public boolean removeItem(long id) {
 
-        for (List<FoodItem> foodItems : menu.getMenu().values()) {
-            Iterator<FoodItem> iterator = foodItems.iterator();
-            while (iterator.hasNext()) {
-                FoodItem item = iterator.next();
-
-                if (item.getId() == id) {
-                    iterator.remove();
-                    return true;
-                }
-            }
-        }
-
-        return false;
+        return menuRepo.removeItem(id);
     }
 
     public boolean removeCuisine(long id) {
 
-        List<CuisineType> cuisines = new ArrayList<>(menu.getMenu().keySet());
-        for (CuisineType cuisine : cuisines) {
-            if (cuisine.getId() == id) {
-                menu.getMenu().remove(cuisine);
-                return true;
-            }
-        }
-        return false;
+        return menuRepo.removeCuisine(id);
+    }
+
+    public void addNewCuisine(String cuisine){
+        menuRepo.addNewCuisine(cuisine);
+    }
+
+    public void addNewFoodItem(FoodItem foodItem){
+        menuRepo.addNewFoodItem(foodItem);
+    }
+
+    public List<CuisineType> getAllCuisines(){
+        return menuRepo.getALlCuisines();
+    }
+
+    public boolean isEmpty(){
+        return menuRepo.isMenuEmpty();
+    }
+
+    public void changePrice(long id, double newPrice){
+        menuRepo.changePrice(id,newPrice);
     }
 
 }

@@ -80,7 +80,7 @@ public class DeliveryPartnerRepoImpl implements DeliveryPartnerRepo {
             } catch (SQLException ex) {
                 System.out.println(ex.getMessage());
             }
-        }finally {
+        } finally {
             try {
                 connection.setAutoCommit(true);
             } catch (SQLException e) {
@@ -106,7 +106,7 @@ public class DeliveryPartnerRepoImpl implements DeliveryPartnerRepo {
                 innerPs.setLong(1, orderId);
                 ResultSet cartContainer = innerPs.executeQuery();
 
-                double amount=resultSet.getDouble("final_amount");
+                double amount = resultSet.getDouble("final_amount");
 
                 HashMap<FoodItem, Integer> items = new HashMap<>();
                 while (cartContainer.next()) {
@@ -120,7 +120,7 @@ public class DeliveryPartnerRepoImpl implements DeliveryPartnerRepo {
                 Discount discount = new PriceDiscount(resultSet.getDouble("minimum_amount"), resultSet.getDouble("discount_percentage"));
 
                 PaymentModeType mode = PaymentModeType.valueOf(resultSet.getString("payment_mode"));
-                PaymentMode payment=mode.create(amount);
+                PaymentMode payment = mode.create(amount);
                 OrderStatus status = OrderStatus.valueOf(resultSet.getString("status"));
 
                 orders.add(
@@ -143,20 +143,20 @@ public class DeliveryPartnerRepoImpl implements DeliveryPartnerRepo {
 
     @Override
     public void completeOrder(long deliveryPartnerId, long orderId) {
-        try{
-            String sql="UPDATE orders SET status='DELIVERED' WHERE order_id=?";
-            PreparedStatement statement=connection.prepareStatement(sql);
-            statement.setLong(1,orderId);
+        try {
+            String sql = "UPDATE orders SET status='DELIVERED' WHERE order_id=?";
+            PreparedStatement statement = connection.prepareStatement(sql);
+            statement.setLong(1, orderId);
 
             statement.executeUpdate();
 
-            String sql1="UPDATE delivery_partner SET is_available=? WHERE user_id=?";
-            PreparedStatement statement1= connection.prepareStatement(sql1);
-            statement1.setBoolean(1,true);
-            statement1.setLong(2,deliveryPartnerId);
+            String sql1 = "UPDATE delivery_partner SET is_available=? WHERE user_id=?";
+            PreparedStatement statement1 = connection.prepareStatement(sql1);
+            statement1.setBoolean(1, true);
+            statement1.setLong(2, deliveryPartnerId);
             statement1.executeUpdate();
 
-        }catch (SQLException e){
+        } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
     }
@@ -168,14 +168,14 @@ public class DeliveryPartnerRepoImpl implements DeliveryPartnerRepo {
             connection.setAutoCommit(false);
 
             String sql = """
-            SELECT o.order_id
-            FROM orders o
-            LEFT JOIN order_assignment oa USING (order_id)
-            WHERE o.status = 'ACCEPTED' AND oa.order_id IS NULL
-            ORDER BY o.placed_at
-            LIMIT 1
-            FOR UPDATE SKIP LOCKED
-            """;
+                    SELECT o.order_id
+                    FROM orders o
+                    LEFT JOIN order_assignment oa USING (order_id)
+                    WHERE o.status = 'ACCEPTED' AND oa.order_id IS NULL
+                    ORDER BY o.placed_at
+                    LIMIT 1
+                    FOR UPDATE SKIP LOCKED
+                    """;
 
             Long orderId = null;
 
@@ -193,13 +193,13 @@ public class DeliveryPartnerRepoImpl implements DeliveryPartnerRepo {
             }
 
             String sql1 = """
-            SELECT user_id
-            FROM delivery_partner
-            WHERE is_available = true AND is_active = true
-            ORDER BY last_delivery_at
-            LIMIT 1
-            FOR UPDATE SKIP LOCKED
-            """;
+                    SELECT user_id
+                    FROM delivery_partner
+                    WHERE is_available = true AND is_active = true
+                    ORDER BY last_delivery_at
+                    LIMIT 1
+                    FOR UPDATE SKIP LOCKED
+                    """;
 
             Long deliveryPartnerId = null;
 
@@ -217,9 +217,9 @@ public class DeliveryPartnerRepoImpl implements DeliveryPartnerRepo {
             }
 
             String sql2 = """
-            INSERT INTO order_assignment(order_id, delivery_partner_id)
-            VALUES (?, ?)
-            """;
+                    INSERT INTO order_assignment(order_id, delivery_partner_id)
+                    VALUES (?, ?)
+                    """;
 
             try (PreparedStatement statement2 = connection.prepareStatement(sql2)) {
                 statement2.setLong(1, orderId);
@@ -228,10 +228,10 @@ public class DeliveryPartnerRepoImpl implements DeliveryPartnerRepo {
             }
 
             String sql3 = """
-            UPDATE delivery_partner
-            SET is_available = false
-            WHERE user_id = ?
-            """;
+                    UPDATE delivery_partner
+                    SET is_available = false
+                    WHERE user_id = ?
+                    """;
 
             try (PreparedStatement statement3 = connection.prepareStatement(sql3)) {
                 statement3.setLong(1, deliveryPartnerId);
@@ -239,10 +239,10 @@ public class DeliveryPartnerRepoImpl implements DeliveryPartnerRepo {
             }
 
             String sql4 = """
-            UPDATE orders
-            SET status = 'OUT_FOR_DELIVERY'
-            WHERE order_id = ?
-            """;
+                    UPDATE orders
+                    SET status = 'OUT_FOR_DELIVERY'
+                    WHERE order_id = ?
+                    """;
 
             try (PreparedStatement statement4 = connection.prepareStatement(sql4)) {
                 statement4.setLong(1, orderId);
@@ -261,5 +261,21 @@ public class DeliveryPartnerRepoImpl implements DeliveryPartnerRepo {
 
             System.out.println(e.getMessage());
         }
+    }
+
+    @Override
+    public boolean isDeliveryPartnersEmpty() {
+        try {
+            String sql = "SELECT 1 FROM delivery_partner WHERE is_active=true";
+            PreparedStatement ps = connection.prepareStatement(sql);
+
+            ResultSet rs = ps.executeQuery();
+
+            return !rs.next();
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        return true;
     }
 }

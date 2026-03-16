@@ -8,12 +8,12 @@ public class AuthenticationService {
 
     private UserService userService = UserService.getInstance();
 
-    private User authenticate() {
-        return userService.authenticateUser();
+    private User authenticate(UserType type) {
+        return userService.authenticateUser(type);
     }
 
     public Admin loginAdmin() {
-        User user = authenticate();
+        User user = authenticate(UserType.ADMIN);
         if (!(user instanceof Admin)) {
             throw new UserNotFoundException("Admin not found!");
         }
@@ -21,7 +21,7 @@ public class AuthenticationService {
     }
 
     public Customer loginCustomer() {
-        User user = authenticate();
+        User user = authenticate(UserType.CUSTOMER);
         if (!(user instanceof Customer)) {
             throw new UserNotFoundException("Customer not found!");
         }
@@ -29,7 +29,7 @@ public class AuthenticationService {
     }
 
     public DeliveryPartner loginDeliveryPartner() {
-        User user = authenticate();
+        User user = authenticate(UserType.DELIVERY_PARTNER);
         if (!(user instanceof DeliveryPartner)) {
             throw new UserNotFoundException("Delivery Partner not found!");
         }

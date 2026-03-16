@@ -7,6 +7,8 @@ import com.tss.model.OrderStatus;
 import com.tss.model.users.DeliveryPartner;
 import com.tss.model.users.User;
 import com.tss.model.users.UserType;
+import com.tss.repositories.DeliveryPartnerRepo;
+import com.tss.repositories.DeliveryPartnerRepoImpl;
 import com.tss.repositories.OrderRepository;
 import com.tss.repositories.UserRepository;
 import com.tss.utils.Validate;
@@ -21,6 +23,7 @@ public class DeliveryPartnerService {
     private UserService userService;
     private NotificationService notificationService;
     private UserRepository userRepository;
+    private DeliveryPartnerRepo deliveryPartnerRepo;
 
     public DeliveryPartnerService(User deliveryPartner) {
         this.deliveryPartner = (DeliveryPartner) deliveryPartner;
@@ -30,6 +33,7 @@ public class DeliveryPartnerService {
         userService = UserService.getInstance();
         notificationService = NotificationService.getInstance();
         userRepository = UserRepository.getInstance();
+        deliveryPartnerRepo=new DeliveryPartnerRepoImpl();
     }
 
     public DeliveryPartner getDeliveryPartner() {
@@ -53,10 +57,7 @@ public class DeliveryPartnerService {
 
 
     public void confirmDelivery() {
-        List<Order> pendingOrders = orderRepository
-                .getOrderFromStatus(OrderStatus.OUT_FOR_DELIVERY,
-                        orderRepository
-                                .ordersFromDeliveryAgentId(deliveryPartner.getId()));
+        List<Order> pendingOrders = deliveryPartnerRepo.pendingOrders(deliveryPartner.getId());
 
         if (pendingOrders == null || pendingOrders.isEmpty()) {
             System.out.println("Order not found!");
@@ -77,16 +78,16 @@ public class DeliveryPartnerService {
         if (confirmOrder == null) {
             throw new OrderNotFoundException("No Order Found with id " + orderId + "!");
         }
-        confirmOrder.ChangeState(OrderStatus.DELIVERED);
+        deliveryPartnerRepo.completeOrder(deliveryPartner.getId(),orderId);
+        deliveryPartnerRepo.assignOrder();
 
         notificationService.sendNotification(
                 confirmOrder.getCustomerId(),
-                "Your Order Is Delivered... Order id: " + confirmOrder.getOrderId(),
-                UserType.DELIVERY_PARTNER
+                "Your Order Is Delivered... Order id: " + orderId,
+                UserType.DELIVERY_PARTNER,
+                UserType.CUSTOMER
         );
         System.out.println("Order Delivered...");
-
-        deliveryPartnerManager.pushDeliveryPartnerInQueue(deliveryPartner);
     }
 
     public void displayNotifications() {
@@ -108,7 +109,7 @@ public class DeliveryPartnerService {
         if (!Validate.validateYesNo()) {
             return;
         }
-        notificationService.sendNotification(userRepository.getAdmin().getId(), message,  UserType.DELIVERY_PARTNER);
+        notificationService.sendNotification(userRepository.getAdmin().getId(), message,  UserType.DELIVERY_PARTNER, UserType.ADMIN);
         System.out.println("Message sent...");
     }
 }

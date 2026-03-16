@@ -9,6 +9,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 
 public class MenuRepoImpl implements MenuRepo{
@@ -98,6 +99,60 @@ public class MenuRepoImpl implements MenuRepo{
         return foodItems;
     }
 
+    public HashMap<CuisineType, List<FoodItem>> getMenu() {
+
+        HashMap<CuisineType, List<FoodItem>> menu = new HashMap<>();
+
+        try {
+
+            String sql = """
+                SELECT c.cuisine_id,
+                       c.name AS cuisine_name,
+                       fi.food_item_id,
+                       fi.name AS food_name,
+                       fi.price,
+                       fi.available
+                FROM cuisine c
+                LEFT JOIN food_item fi
+                ON c.cuisine_id = fi.cuisine_id
+                """;
+
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+
+                long cuisineId = rs.getLong("cuisine_id");
+                String cuisineName = rs.getString("cuisine_name");
+
+                CuisineType cuisine = new CuisineType(cuisineId, cuisineName);
+
+                menu.putIfAbsent(cuisine, new ArrayList<>());
+
+                long foodId = rs.getLong("food_item_id");
+
+                if (!rs.wasNull()) {
+
+                    FoodItem foodItem = new FoodItem(
+                            foodId,
+                            rs.getString("food_name"),
+                            rs.getDouble("price"),
+                            cuisineName,
+                            rs.getBoolean("available"),
+                            cuisineId
+                    );
+
+                    menu.get(cuisine).add(foodItem);
+                }
+            }
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        return menu;
+    }
+
     @Override
     public FoodItem getItemFromId(long itemId) {
         FoodItem foodItem=null;
@@ -177,5 +232,20 @@ public class MenuRepoImpl implements MenuRepo{
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
+    }
+
+    @Override
+    public boolean isMenuEmpty() {
+        try {
+            String sql = "SELECT 1 FROM food_item WHERE available=true";
+            PreparedStatement ps = connection.prepareStatement(sql);
+            ResultSet rs = ps.executeQuery();
+
+            return !rs.next();
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+        return true;
     }
 }

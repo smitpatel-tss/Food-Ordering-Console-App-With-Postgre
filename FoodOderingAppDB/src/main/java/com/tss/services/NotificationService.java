@@ -4,6 +4,8 @@ import com.tss.exceptions.UserNotFoundException;
 import com.tss.model.Notification;
 import com.tss.model.users.User;
 import com.tss.model.users.UserType;
+import com.tss.repositories.NotificationRepo;
+import com.tss.repositories.NotificationRepoImpl;
 import com.tss.repositories.NotificationRepository;
 import com.tss.repositories.UserRepository;
 
@@ -12,13 +14,11 @@ import java.util.List;
 
 public class NotificationService {
 
-    private NotificationRepository notificationRepository;
-    private UserRepository userRepository;
+    private NotificationRepo notificationRepo;
 
 
     private NotificationService() {
-        notificationRepository = NotificationRepository.getInstance();
-        userRepository = UserRepository.getInstance();
+        notificationRepo=new NotificationRepoImpl();
     }
 
     private static class InstanceContainer {
@@ -29,45 +29,23 @@ public class NotificationService {
         return InstanceContainer.obj;
     }
 
-    public void sendNotification(long userId, String message, UserType receiver) {
-        Notification notification = new Notification(message, userId, receiver);
-        notificationRepository.addNotification(userId, notification);
+    public void sendNotification(long userId, String message, UserType sender,UserType receiver) {
+        Notification notification = new Notification(userId,message,sender, receiver);
+
+        notificationRepo.sendNotification(notification);
     }
 
     public List<Notification> getNotifications(long userId) {
-        return notificationRepository.getUserNotifications(userId);
-    }
-
-    public void clearNotifications(long userId) {
-        notificationRepository.clearUserNotifications(userId);
+        return notificationRepo.getAllUnseenNotifications(userId);
     }
 
     public void broadcastCustomerNotification(String message, UserType from) {
-        List<Long> customerIds = new ArrayList<>();
-        for (User user : userRepository.getCustomers()) {
-            customerIds.add(user.getId());
-        }
-        if (customerIds.isEmpty()) {
-            throw new UserNotFoundException("No Customers Found!");
-        }
+        notificationRepo.sendNotification(new Notification(message,from,UserType.CUSTOMER));
 
-        for (Long userId : customerIds) {
-            sendNotification(userId, message, from);
-        }
     }
 
     public void broadcastDeliveryPartnerNotification(String message, UserType from) {
-        List<Long> customerIds = new ArrayList<>();
-        for (User user : userRepository.getDeliveryPartners()) {
-            customerIds.add(user.getId());
-        }
-        if (customerIds.isEmpty()) {
-            throw new UserNotFoundException("No Delivery Partners Found!");
-        }
-
-        for (Long userId : customerIds) {
-            sendNotification(userId, message, from);
-        }
+        notificationRepo.sendNotification(new Notification(message,from,UserType.DELIVERY_PARTNER));
     }
 
     public void displayNotifications(List<Notification> notificationList) {

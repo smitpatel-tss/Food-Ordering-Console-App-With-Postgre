@@ -24,6 +24,12 @@ public class Notification {
         this.receiver=receiver;
     }
 
+    public Notification(String message, UserType sender, UserType receiver) {
+        this.message = message;
+        this.sender = sender;
+        this.receiver=receiver;
+    }
+
     public String getMessage() {
         return message;
     }

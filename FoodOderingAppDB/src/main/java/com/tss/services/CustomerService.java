@@ -2,6 +2,7 @@ package com.tss.services;
 
 import com.tss.exceptions.CartEmptyException;
 import com.tss.exceptions.ItemNotFoundException;
+import com.tss.exceptions.NoDeliveryPartnerAvailable;
 import com.tss.exceptions.UserNotFoundException;
 import com.tss.factory.UserFactory;
 import com.tss.model.*;
@@ -117,14 +118,7 @@ public class CustomerService {
     }
 
     public void placeOrder() {
-        if (cart.getCart().isEmpty()) {
-            throw new CartEmptyException();
-        }
 
-        if (userRepository.getDeliveryPartners().isEmpty()) {
-            System.out.println("We're sorry! No Delivery Partners Available.");
-            return;
-        }
         displayCart();
         System.out.println("Do you want to place an Order?(y/n): ");
         if (!Validate.validateYesNo()) {
@@ -142,10 +136,17 @@ public class CustomerService {
         if (paymentMode == null) {
             throw new IllegalArgumentException("Payment failed!");
         }
-        System.out.println("Order Placed...");
-        Order myOrder = orderService.placeOrder(cart, paymentMode, customer.getId());
+        Order myOrder=null;
+        try{
+            myOrder = orderService.placeOrder(paymentMode, customer.getId());
+        }catch (CartEmptyException e){
+            System.out.println(e.getMessage());
+        }catch (NoDeliveryPartnerAvailable e){
+            System.out.println(e.getMessage());
+        }
+
         invoiceService.printInvoice(myOrder);
-        emptyTheCart();
+        System.out.println("Order Placed...");
     }
 
     public void newCustomerRegister() {
@@ -194,7 +195,7 @@ public class CustomerService {
         if (!Validate.validateYesNo()) {
             return;
         }
-        notificationService.sendNotification(userRepository.getAdmin().getId(), message, UserType.CUSTOMER);
+        notificationService.sendNotification(userRepository.getAdmin().getId(), message, UserType.CUSTOMER,UserType.ADMIN);
         System.out.println("Message Sent...");
     }
 

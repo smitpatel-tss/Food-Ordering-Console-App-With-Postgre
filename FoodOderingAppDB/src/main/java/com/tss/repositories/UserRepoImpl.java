@@ -206,4 +206,26 @@ public class UserRepoImpl implements UserRepo {
 
         return null;
     }
+
+    @Override
+    public boolean changePassword(long phone, String newPassword, UserType type) {
+
+        String sql = "UPDATE users SET password=? WHERE phone=? AND user_type=?";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+
+            ps.setString(1, newPassword);
+            ps.setLong(2, phone);
+            ps.setString(3, type.name());
+
+            int rows = ps.executeUpdate();
+
+            return rows > 0;
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        return false;
+    }
 }

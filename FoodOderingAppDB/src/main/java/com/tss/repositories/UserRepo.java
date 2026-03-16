@@ -8,4 +8,5 @@ public interface UserRepo {
     boolean checkPassword(long number, String password, UserType type);
     User getUserFromId(long id);
     User getUserFromNumber(long phone, UserType type);
+    boolean changePassword(long phone, String newPassword, UserType type);
 }

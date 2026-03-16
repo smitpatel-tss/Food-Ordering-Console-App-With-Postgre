@@ -8,9 +8,7 @@ import com.tss.factory.FoodItemFactory;
 import com.tss.factory.UserFactory;
 import com.tss.model.Order;
 import com.tss.model.users.*;
-import com.tss.repositories.MenuRepository;
-import com.tss.repositories.OrderRepository;
-import com.tss.repositories.UserRepository;
+import com.tss.repositories.*;
 import com.tss.utils.Validate;
 
 import java.util.ArrayList;
@@ -28,6 +26,10 @@ public class AdminService {
     private OrderRepository orderRepository;
     private UserService userService;
     private NotificationService notificationService;
+    private MenuRepo menuRepo;
+    private OrderRepo orderRepo;
+    private OrderService orderService;
+    private DeliveryPartnerRepo deliveryPartnerRepo;
 
     public AdminService(User admin) {
         this.admin = (Admin) admin;
@@ -38,6 +40,10 @@ public class AdminService {
         this.orderRepository = OrderRepository.getInstance();
         userService = UserService.getInstance();
         notificationService = NotificationService.getInstance();
+        menuRepo=new MenuRepoImpl();
+        orderRepo=new OrderRepoImpl();
+        orderService=OrderService.getInstance();
+        deliveryPartnerRepo=new DeliveryPartnerRepoImpl();
     }
 
     public void setAdmin(Admin admin) {
@@ -60,14 +66,13 @@ public class AdminService {
         System.out.println("ADDING NEW CUISINE:");
         System.out.print("Add Cuisine Name: ");
         String cuisineName = Validate.validateCharAndNumberOnlyString();
-        CuisineType newCuisineType = new CuisineType(cuisineName);
-        menu.put(newCuisineType, new ArrayList<>());
+        menuService.addNewCuisine(cuisineName);
         System.out.println(cuisineName + " Food Cuisine Type Successfully Added to Menu!");
     }
 
     public void addNewFoodItem() { // MENU REPO
         System.out.println("ADDING NEW FOOD ITEM:");
-        List<CuisineType> cuisineList = new ArrayList<>(menu.keySet());
+        List<CuisineType> cuisineList =menuService.getAllCuisines();
 
         if (cuisineList.isEmpty()) {
             System.out.println("No cuisine Available!");
@@ -96,11 +101,15 @@ public class AdminService {
 
         FoodItem newFoodItem = FoodItemFactory.getFoodItemInstance(itemName, price, cuisineList.get(i));
 
-        menu.get(cuisineList.get(i)).add(newFoodItem);
+        menuService.addNewFoodItem(newFoodItem);
         System.out.println(itemName + " Added Successfully...");
     }
 
-    public void changePrice() { // MENU REPO
+    public void changePrice() {
+        if(menuService.isEmpty()){
+            System.out.println("No Items Available!");
+            return;
+        }
         menuService.displayMenu();
 
         System.out.println("CHANGING PRICE: ");
@@ -115,20 +124,20 @@ public class AdminService {
         System.out.println("Current Price of " + item.getName() + " is " + item.getPrice());
         System.out.print("Enter New Price: ");
         double price = Validate.validatePositiveDouble();
-        item.setPrice(price);
+        menuService.changePrice(id,price);
         System.out.println("Price Changed Successfully...");
     }
 
 
     public void printAllOrders() {
         System.out.println("ORDER HISTORY:");
-        orderRepository.displayAllOrders();
+        orderService.displayOrders(orderRepo.getAllOrders());
     }
 
     public void addNewDeliveryPartner() {
         System.out.println("ADDING NEW DELIVERY PARTNER:");
         User newDeliveryPartner = userService.makeUser(UserType.DELIVERY_PARTNER);
-        userRepository.addUser(newDeliveryPartner);
+        deliveryPartnerRepo.addNewDeliveryPartner((DeliveryPartner) newDeliveryPartner);
         deliveryPartnerManager.pushDeliveryPartnerInQueue((DeliveryPartner) newDeliveryPartner);
 
         System.out.println("Delivery Partner " + newDeliveryPartner.getName() + " Added successfully...");

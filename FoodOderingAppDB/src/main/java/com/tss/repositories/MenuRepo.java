@@ -3,6 +3,7 @@ package com.tss.repositories;
 import com.tss.model.CuisineType;
 import com.tss.model.FoodItem;
 
+import java.util.HashMap;
 import java.util.List;
 
 public interface MenuRepo {
@@ -14,4 +15,6 @@ public interface MenuRepo {
     boolean removeItem(long itemId);
     boolean removeCuisine(long cuisineId);
     void changePrice(long id,double newPrice);
+    boolean isMenuEmpty();
+    HashMap<CuisineType, List<FoodItem>> getMenu();
 }

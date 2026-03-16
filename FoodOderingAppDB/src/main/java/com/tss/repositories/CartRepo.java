@@ -9,4 +9,5 @@ public interface CartRepo {
     void removeItemFromCart(long userId, long foodItemId, int quantity);
     void clearCart(long userId);
     Cart getCart(long userId);
+    boolean isCartEmpty(long userId);
 }

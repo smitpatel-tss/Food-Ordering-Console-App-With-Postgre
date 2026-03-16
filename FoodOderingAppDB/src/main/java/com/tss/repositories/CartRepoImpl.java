@@ -178,6 +178,7 @@ public class CartRepoImpl implements CartRepo {
         }
     }
 
+
     @Override
     public Cart getCart(long userId) {
 
@@ -237,5 +238,30 @@ public class CartRepoImpl implements CartRepo {
             System.out.println(e.getMessage());
         }
         return new Cart(new HashMap<>(), 0);
+    }
+
+    @Override
+    public boolean isCartEmpty(long userId) {
+        try {
+
+            Long cartId = getCartIdByUserId(userId);
+            if (cartId == null) {
+                return true;
+            }
+
+            String query = "SELECT 1 FROM cart_items WHERE cart_id = ?";
+            PreparedStatement ps = connection.prepareStatement(query);
+
+            ps.setLong(1, cartId);
+
+            ResultSet rs = ps.executeQuery();
+
+            return !rs.next();
+
+        } catch (SQLException e) {
+            System.out.println(e.getMessage());
+        }
+
+        return true;
     }
 }

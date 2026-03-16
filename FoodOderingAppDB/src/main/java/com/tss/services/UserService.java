@@ -5,7 +5,7 @@ import com.tss.factory.UserFactory;
 import com.tss.model.Notification;
 import com.tss.model.users.User;
 import com.tss.model.users.UserType;
-import com.tss.repositories.UserRepository;
+import com.tss.repositories.*;
 import com.tss.utils.Validate;
 
 import java.util.List;
@@ -14,11 +14,15 @@ public class UserService {
     private UserFactory userFactory;
     private UserRepository userRepository;
     private NotificationService notificationService;
+    private NotificationRepo notificationRepo;
+    private UserRepo userRepo;
 
     private UserService() {
         userFactory = new UserFactory();
         userRepository = UserRepository.getInstance();
         notificationService = NotificationService.getInstance();
+        notificationRepo=new NotificationRepoImpl();
+        userRepo=new UserRepoImpl();
     }
 
     private static class InstanceContainer {
@@ -39,7 +43,7 @@ public class UserService {
 
         System.out.print("Phone Number  : ");
         long number = Validate.validatePhoneNumber();
-        while (!userRepository.canAddNumber(number)) {
+        while (!userRepo.canAddNumber(number,type)) {
             System.out.println("✖ Number already registered.");
             System.out.print("Enter Different Number : ");
             number = Validate.validatePhoneNumber();
@@ -51,7 +55,7 @@ public class UserService {
         return userFactory.getUser(name, type, new AccountInfo(number, password));
     }
 
-    public User authenticateUser() {
+    public User authenticateUser(UserType type) {
         System.out.println("\n=================================");
         System.out.println("             LOGIN               ");
         System.out.println("=================================");
@@ -61,33 +65,33 @@ public class UserService {
         System.out.print("Enter Password    : ");
         String password = Validate.validatePassword();
 
-        User user = userRepository.getUserFromNumber(number);
+        User user = userRepo.getUserFromNumber(number,type);
 
         if (user == null) {
             return null;
         }
-        if (userRepository.passwordCheck(number, password)) {
+        if (userRepo.checkPassword(number, password,type)) {
             return user;
         }
 
         return null;
     }
 
-    public void changePassword(User user) {
+    public void changePassword(User user,UserType type) {
         if (user == null) {
             throw new IllegalArgumentException("User cannot be null");
         }
         System.out.print("Enter Current Password : ");
         String oldPassword = Validate.validatePassword();
 
-        if (!userRepository.passwordCheck(user.getAccountInfo().getPhoneNumber(), oldPassword)) {
+        if (!userRepo.checkPassword(user.getAccountInfo().getPhoneNumber(),oldPassword,type)) {
             System.out.println("✖ Incorrect Password.");
             return;
         }
         System.out.print("Enter New Password     : ");
         String newPassword = Validate.validatePassword();
 
-        while (user.getAccountInfo().getPassword().equals(newPassword)) {
+        while (oldPassword.equals(newPassword)) {
             System.out.println("New password cannot be same as old password.");
             System.out.print("Enter different Password: ");
             newPassword = Validate.validatePassword();
@@ -125,13 +129,12 @@ public class UserService {
     }
 
     public void displayUserNotifications(User user) {
-        List<Notification> notifications = notificationService.getNotifications(user.getId());
+        List<Notification> notifications = notificationRepo.getAllUnseenNotifications(user.getId());
         if (notifications.isEmpty()) {
             System.out.println("No Notification yet!");
             return;
         }
         System.out.println("INBOX:");
         notificationService.displayNotifications(notifications);
-        notificationService.clearNotifications(user.getId());
     }
 }
