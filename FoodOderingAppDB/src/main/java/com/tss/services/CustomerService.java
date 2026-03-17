@@ -166,23 +166,13 @@ public class CustomerService {
         }catch (NoDeliveryPartnerAvailable e){
             System.out.println(e.getMessage());
         }
+        if(myOrder==null){
+            return;
+        }
 
         invoiceService.printInvoice(myOrder);
         System.out.println("Order Placed...");
     }
-
-//    public void newCustomerRegister() {
-//
-//        User customer = userService.makeUser(UserType.CUSTOMER);
-//
-//
-//        System.out.println("✔ New Customer "
-//                + customer.getName()
-//                + " Registered, with Phone Number "
-//                + customer
-//                .getAccountInfo().getPhoneNumber());
-//    }
-
 
     public void displayMenu() {
         if (menuService.isEmpty()) {

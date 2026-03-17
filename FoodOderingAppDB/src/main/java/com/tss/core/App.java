@@ -12,7 +12,7 @@ public class App {
 
     public void start() {
 
-        adminInitializer();
+//        adminInitializer();
 
         AdminPanel adminPanel = new AdminPanel();
         CustomerPanel customerPanel = new CustomerPanel();

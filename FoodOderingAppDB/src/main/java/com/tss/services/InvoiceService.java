@@ -42,10 +42,6 @@ public class InvoiceService {
         System.out.printf("Final Amount    : ₹%.2f%n", order.getFinalAmount());
         System.out.printf("Payment Mode    : %s%n", order.getPaymentMode().getDescription());
 
-        String deliveryPartner = (order.getDeliveryPartner() != null) ?
-                order.getDeliveryPartner().getName() : "Not Assigned yet";
-        System.out.printf("Delivery Partner: %s%n", deliveryPartner);
-
         System.out.println("===================================================\n");
     }
 }

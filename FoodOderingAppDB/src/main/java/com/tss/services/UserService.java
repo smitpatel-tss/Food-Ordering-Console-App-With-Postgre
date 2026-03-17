@@ -42,7 +42,7 @@ public class UserService {
         System.out.print("Phone Number  : ");
         long number = Validate.validatePhoneNumber();
         while (!userRepo.canAddNumber(number,type)) {
-            System.out.println("✖ Number already registered.");
+            System.out.println("Number already registered.");
             System.out.print("Enter Different Number : ");
             number = Validate.validatePhoneNumber();
         }
@@ -83,7 +83,7 @@ public class UserService {
         String oldPassword = Validate.validatePassword();
 
         if (!userRepo.checkPassword(user.getAccountInfo().getPhoneNumber(),oldPassword,type)) {
-            System.out.println("✖ Incorrect Password.");
+            System.out.println("Incorrect Password.");
             return;
         }
         System.out.print("Enter New Password     : ");
@@ -100,7 +100,7 @@ public class UserService {
         }
         user.getAccountInfo().setPassword(newPassword);
         userRepo.changePassword(user.getId(),newPassword,type);
-        System.out.println("✔ Password Changed Successfully.");
+        System.out.println("Password Changed Successfully.");
     }
 
     public void changeNumber(User user,UserType type) {
@@ -112,7 +112,7 @@ public class UserService {
         long number = Validate.validatePhoneNumber();
         while (!userRepo.canAddNumber(number,type)) {
             if (user.getAccountInfo().getPhoneNumber()==number) {
-                System.out.println("✖ This number is already linked to your account.");
+                System.out.println("This number is already linked to your account.");
                 return;
             }
             System.out.println("Number already registered!");
@@ -125,7 +125,7 @@ public class UserService {
         }
         user.getAccountInfo().setPhoneNumber(number);
         userRepo.changePhoneNumber(user.getId(),number,type);
-        System.out.println("✔ Phone Number Updated Successfully.");
+        System.out.println("Phone Number Updated Successfully.");
     }
 
     public void displayUserNotifications(User user) {

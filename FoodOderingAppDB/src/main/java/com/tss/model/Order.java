@@ -42,6 +42,29 @@ public class Order {
         }
     }
 
+    public Order(long orderId, Discount possibleDiscount, Cart cart, PaymentMode paymentMode,
+                 long customerId, OrderStatus status, Long deliveryPartnerId, String deliveryPartnerName) {
+
+        this.orderId = orderId;
+        this.cart = cart;
+        this.possibleDiscount = possibleDiscount;
+        this.paymentMode = paymentMode;
+        this.customerId = customerId;
+        this.status = status;
+
+        if (possibleDiscount != null) {
+            this.finalAmount = paymentMode.getAmount() - (paymentMode.getAmount() * possibleDiscount.getDiscount());
+        } else {
+            this.finalAmount = paymentMode.getAmount();
+        }
+
+        if (deliveryPartnerId != null && deliveryPartnerName != null) {
+            this.deliveryPartner = new DeliveryPartner(deliveryPartnerId, deliveryPartnerName);
+        } else {
+            this.deliveryPartner = null;
+        }
+    }
+
     public void ChangeState(OrderStatus orderstatus){
         status=orderstatus;
     }

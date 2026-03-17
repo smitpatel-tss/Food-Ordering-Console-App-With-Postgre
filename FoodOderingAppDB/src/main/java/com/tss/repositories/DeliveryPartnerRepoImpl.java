@@ -54,7 +54,7 @@ public class DeliveryPartnerRepoImpl implements DeliveryPartnerRepo {
         try {
             connection.setAutoCommit(false);
 
-            String sql1 = "INSERT INTO users(name,user_type,phone,password) VALUES (?,?,?,?) RETURNING user_id";
+            String sql1 = "INSERT INTO users(name,user_type,phone,password) VALUES (?,?::user_type,?,?) RETURNING user_id";
 
             try (PreparedStatement ps1 = connection.prepareStatement(sql1)) {
 
@@ -99,80 +99,89 @@ public class DeliveryPartnerRepoImpl implements DeliveryPartnerRepo {
     public List<Order> pendingOrders(long deliveryPartnerId) {
         List<Order> orders = new ArrayList<>();
 
-        try {
-            String sql = """
-                    SELECT o.order_id,o.customer_id,o.final_amount,o.status,o.payment_mode,
-                    pd.minimum_amount, pd.discount_percentage
+        String sql = """
+                    SELECT 
+                        o.order_id,
+                        o.customer_id,
+                        o.final_amount,
+                        o.status,
+                        o.payment_mode,
+                        pd.minimum_amount,
+                        pd.discount_percentage,
+                        os.delivery_partner_id,
+                        u_dp.name AS delivery_partner_name
                     FROM orders o
                     JOIN order_assignment os USING(order_id)
                     LEFT JOIN price_discount pd USING(discount_id)
-                    WHERE os.delivery_partner_id=? AND o.status='OUT_FOR_DELIVERY'
-                    """;
+                    LEFT JOIN users u_dp ON os.delivery_partner_id = u_dp.user_id
+                    WHERE os.delivery_partner_id = ? AND o.status = 'OUT_FOR_DELIVERY'
+                """;
 
-            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setLong(1, deliveryPartnerId);
 
-                ps.setLong(1, deliveryPartnerId);
+            try (ResultSet resultSet = ps.executeQuery()) {
 
-                try (ResultSet resultSet = ps.executeQuery()) {
-
-                    String innerSql = """
+                String innerSql = """
                             SELECT fi.name AS item_name, fi.price, c.name AS cuisine_name, oi.quantity
                             FROM order_items oi
                             JOIN food_item fi USING(food_item_id)
                             JOIN cuisine c USING(cuisine_id)
-                            WHERE order_id=?
-                            """;
+                            WHERE order_id = ?
+                        """;
 
-                    try (PreparedStatement innerPs = connection.prepareStatement(innerSql)) {
+                try (PreparedStatement innerPs = connection.prepareStatement(innerSql)) {
 
-                        while (resultSet.next()) {
+                    while (resultSet.next()) {
+                        long orderId = resultSet.getLong("order_id");
 
-                            long orderId = resultSet.getLong("order_id");
+                        innerPs.setLong(1, orderId);
 
-                            innerPs.setLong(1, orderId);
+                        try (ResultSet cartContainer = innerPs.executeQuery()) {
+                            double amount = resultSet.getDouble("final_amount");
 
-                            try (ResultSet cartContainer = innerPs.executeQuery()) {
+                            HashMap<FoodItem, Integer> items = new HashMap<>();
 
-                                double amount = resultSet.getDouble("final_amount");
-
-                                HashMap<FoodItem, Integer> items = new HashMap<>();
-
-                                while (cartContainer.next()) {
-                                    items.put(new FoodItem(
-                                                    cartContainer.getString("item_name"),
-                                                    cartContainer.getDouble("price"),
-                                                    cartContainer.getString("cuisine_name")
-                                            ),
-                                            cartContainer.getInt("quantity"));
-                                }
-
-                                Cart cart = new Cart(items, amount);
-
-                                Discount discount = new PriceDiscount(
-                                        resultSet.getDouble("minimum_amount"),
-                                        resultSet.getDouble("discount_percentage")
-                                );
-
-                                PaymentModeType mode = PaymentModeType.valueOf(resultSet.getString("payment_mode"));
-                                PaymentMode payment = mode.create(amount);
-                                OrderStatus status = OrderStatus.valueOf(resultSet.getString("status"));
-
-                                orders.add(
-                                        new Order(
-                                                resultSet.getLong("order_id"),
-                                                discount,
-                                                cart,
-                                                payment,
-                                                resultSet.getLong("customer_id"),
-                                                status
-                                        )
-                                );
+                            while (cartContainer.next()) {
+                                items.put(new FoodItem(
+                                                cartContainer.getString("item_name"),
+                                                cartContainer.getDouble("price"),
+                                                cartContainer.getString("cuisine_name")
+                                        ),
+                                        cartContainer.getInt("quantity"));
                             }
+
+                            Cart cart = new Cart(items, amount);
+
+                            Discount discount = new PriceDiscount(
+                                    resultSet.getDouble("minimum_amount"),
+                                    resultSet.getDouble("discount_percentage")
+                            );
+
+                            PaymentModeType mode = PaymentModeType.valueOf(resultSet.getString("payment_mode"));
+                            PaymentMode payment = mode.create(amount);
+                            OrderStatus status = OrderStatus.valueOf(resultSet.getString("status"));
+
+                            Long dpId = resultSet.getLong("delivery_partner_id");
+                            if (resultSet.wasNull()) dpId = null;
+
+                            String dpName = resultSet.getString("delivery_partner_name");
+                            if (dpName != null && dpName.isEmpty()) dpName = null;
+
+                            orders.add(new Order(
+                                    orderId,
+                                    discount,
+                                    cart,
+                                    payment,
+                                    resultSet.getLong("customer_id"),
+                                    status,
+                                    dpId,
+                                    dpName
+                            ));
                         }
                     }
                 }
             }
-
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
@@ -183,12 +192,23 @@ public class DeliveryPartnerRepoImpl implements DeliveryPartnerRepo {
     @Override
     public void completeOrder(long deliveryPartnerId, long orderId) {
         try {
+            connection.setAutoCommit(false);
 
-            String sql = "UPDATE orders SET status='DELIVERED' WHERE order_id=?";
+            String sql = """
+                        UPDATE orders o
+                        SET status = 'DELIVERED'
+                        FROM order_assignment os
+                        WHERE o.order_id = ? AND os.order_id = o.order_id AND os.delivery_partner_id = ?
+                    """;
 
             try (PreparedStatement statement = connection.prepareStatement(sql)) {
                 statement.setLong(1, orderId);
-                statement.executeUpdate();
+                statement.setLong(2, deliveryPartnerId);
+                int updated = statement.executeUpdate();
+
+                if (updated == 0) {
+                    throw new RuntimeException("Order not found!");
+                }
             }
 
             String sql1 = "UPDATE delivery_partner SET is_available=? WHERE user_id=?";
@@ -199,7 +219,15 @@ public class DeliveryPartnerRepoImpl implements DeliveryPartnerRepo {
                 statement1.executeUpdate();
             }
 
+            connection.commit();
+            connection.setAutoCommit(true);
         } catch (SQLException e) {
+            try {
+                connection.rollback();
+                connection.setAutoCommit(true);
+            } catch (SQLException ex) {
+                System.out.println(ex.getMessage());
+            }
             System.out.println(e.getMessage());
         }
     }
@@ -211,12 +239,14 @@ public class DeliveryPartnerRepoImpl implements DeliveryPartnerRepo {
             connection.setAutoCommit(false);
 
             String sql = """
-                    SELECT o.order_id
-                    FROM orders o
-                    LEFT JOIN order_assignment oa USING (order_id)
-                    WHERE o.status = 'ACCEPTED' AND oa.order_id IS NULL
-                    ORDER BY o.placed_at
-                    LIMIT 1
+                    SELECT o.order_id FROM orders o
+                    WHERE o.status = 'ACCEPTED'
+                    AND NOT EXISTS (
+                        SELECT 1
+                        FROM order_assignment oa
+                        WHERE oa.order_id = o.order_id
+                    )
+                    ORDER BY o.placed_at LIMIT 1
                     FOR UPDATE SKIP LOCKED
                     """;
 

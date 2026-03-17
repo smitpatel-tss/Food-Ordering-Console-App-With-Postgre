@@ -23,11 +23,16 @@ public class NotificationRepoImpl implements NotificationRepo {
     @Override
     public void sendNotification(Notification notification) {
 
-        String sql = "INSERT INTO notification(user_id,message,sender,receiver) VALUES(?,?,?,?)";
+        String sql = "INSERT INTO notification(user_id,message,sender,receiver) VALUES(?,?,?::user_type,?::user_type)";
 
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
 
-            statement.setLong(1, notification.getUserId());
+            if (notification.getUserId() == null) {
+                statement.setNull(1, java.sql.Types.BIGINT);
+            } else {
+                statement.setLong(1, notification.getUserId());
+            }
+
             statement.setString(2, notification.getMessage());
             statement.setString(3, notification.getSender().name());
             statement.setString(4, notification.getReceiver().name());
@@ -35,7 +40,7 @@ public class NotificationRepoImpl implements NotificationRepo {
             statement.executeUpdate();
 
         } catch (SQLException e) {
-            System.out.println(e.getMessage());
+            e.printStackTrace();
         }
     }
 
@@ -71,8 +76,8 @@ public class NotificationRepoImpl implements NotificationRepo {
                     FROM notification
                     WHERE
                         (user_id = ?)
-                        OR (sender = 'ADMIN' AND receiver = ? AND user_id IS NULL)
-                        OR (? = 'ADMIN' AND receiver = 'ADMIN')
+                        OR (sender = 'ADMIN' AND receiver = ?::user_type AND user_id IS NULL)
+                        OR (?::user_type = 'ADMIN' AND receiver = 'ADMIN')
                     ORDER BY created_at
                     OFFSET ?
                     """;

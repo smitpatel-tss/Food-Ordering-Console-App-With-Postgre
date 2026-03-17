@@ -23,7 +23,7 @@ public class CustomerRepoImpl implements CustomerRepo {
         try {
             connection.setAutoCommit(false);
 
-            String sql1 = "INSERT INTO users(name,user_type,phone,password) VALUES (?,?,?,?) RETURNING user_id";
+            String sql1 = "INSERT INTO users(name,user_type,phone,password) VALUES (?,?::user_type,?,?) RETURNING user_id";
 
             try (PreparedStatement ps1 = connection.prepareStatement(sql1)) {
 

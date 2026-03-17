@@ -225,8 +225,9 @@ public class AdminService {
     public void revenueDetails() {
         List<Order> orders=orderRepo.getAllOrders();
         if(orders.isEmpty()){
-            System.out.println("Total Number Of Orders: " + 0);
-            System.out.println("Total Earnings        : " + 0);
+            System.out.println("Total Number Of Orders: 0");
+            System.out.println("Total Earnings        : 0.0");
+            return;
         }
 
         double totalRevenue = 0;

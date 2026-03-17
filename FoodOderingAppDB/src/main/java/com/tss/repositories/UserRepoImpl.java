@@ -9,6 +9,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 
 public class UserRepoImpl implements UserRepo {
+
     private Connection connection;
 
     public UserRepoImpl() {
@@ -20,21 +21,17 @@ public class UserRepoImpl implements UserRepo {
 
         String table = "";
 
-        switch (type) {
-            case CUSTOMER -> table = "customers";
-            case DELIVERY_PARTNER -> table = "delivery_partner";
-            case ADMIN -> table = "admins";
-        }
-
-        String sql = "SELECT 1 FROM " + table + " WHERE phone=? LIMIT 1";
+        String sql = "SELECT 1 FROM users WHERE phone=? AND user_type=?::user_type LIMIT 1";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
 
             ps.setLong(1, number);
-            ResultSet rs = ps.executeQuery();
+            ps.setString(2,type.name());
 
-            if (rs.next()) {
-                return false;
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return false;
+                }
             }
 
         } catch (SQLException e) {
@@ -43,29 +40,25 @@ public class UserRepoImpl implements UserRepo {
 
         return true;
     }
-
     @Override
     public boolean checkPassword(long number, String password, UserType type) {
 
         String table = "";
 
-        switch (type) {
-            case CUSTOMER -> table = "customer";
-            case DELIVERY_PARTNER -> table = "delivery_partner";
-            case ADMIN -> table = "admin";
-        }
 
-        String sql = "SELECT 1 FROM " + table + " WHERE phone=? AND password=? LIMIT 1";
+        String sql =
+                "SELECT 1 FROM users u WHERE u.phone=? AND u.password=? AND user_type=?::user_type LIMIT 1";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
 
             ps.setLong(1, number);
             ps.setString(2, password);
+            ps.setString(3,type.name());
 
-            ResultSet rs = ps.executeQuery();
-
-            if (rs.next()) {
-                return true;
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return true;
+                }
             }
 
         } catch (SQLException e) {
@@ -74,68 +67,100 @@ public class UserRepoImpl implements UserRepo {
 
         return false;
     }
-
     @Override
     public User getUserFromId(long id) {
+
         String sql = "SELECT * FROM users WHERE user_id=?";
+
         try (PreparedStatement statement = connection.prepareStatement(sql)) {
+
             statement.setLong(1, id);
-            ResultSet resultSet = statement.executeQuery();
 
-            if (resultSet.next()) {
-                UserType type = UserType.valueOf(resultSet.getString("user_type"));
+            try (ResultSet resultSet = statement.executeQuery()) {
 
-                User user = null;
-                switch (type) {
-                    case CUSTOMER -> {
-                        String q = "SELECT user_id,name,phone,password,address FROM user JOIN customer USING(user_id) WHERE user_id=?;";
-                        PreparedStatement statement1 = connection.prepareStatement(q);
-                        statement1.setLong(1, id);
-                        ResultSet result = statement1.executeQuery();
-                        if(result.next()){
-                            user = new Customer(
-                                    result.getLong("user_id"),
-                                    result.getString("name"),
-                                    result.getLong("phone"),
-                                    result.getString("password"),
-                                    result.getString("address")
-                            );
+                if (resultSet.next()) {
+
+                    UserType type = UserType.valueOf(resultSet.getString("user_type"));
+
+                    User user = null;
+
+                    switch (type) {
+
+                        case CUSTOMER -> {
+
+                            String q = "SELECT user_id,name,phone,password,address FROM users JOIN customer USING(user_id) WHERE user_id=?";
+
+                            try (PreparedStatement statement1 = connection.prepareStatement(q)) {
+
+                                statement1.setLong(1, id);
+
+                                try (ResultSet result = statement1.executeQuery()) {
+
+                                    if (result.next()) {
+
+                                        user = new Customer(
+                                                result.getLong("user_id"),
+                                                result.getString("name"),
+                                                result.getLong("phone"),
+                                                result.getString("password"),
+                                                result.getString("address")
+                                        );
+                                    }
+                                }
+                            }
                         }
 
-                    }
-                    case DELIVERY_PARTNER -> {
-                        String q = "SELECT user_id,name,phone,password,is_available,is_active FROM user JOIN delivery_partner USING(user_id) WHERE user_id=?;";
-                        PreparedStatement statement1 = connection.prepareStatement(q);
-                        statement1.setLong(1, id);
-                        ResultSet result = statement1.executeQuery();
-                        if(result.next()){
-                            user = new DeliveryPartner(
-                                    result.getLong("user_id"),
-                                    result.getString("name"),
-                                    result.getLong("phone"),
-                                    result.getString("password"),
-                                    result.getBoolean("is_available"),
-                                    result.getBoolean("is_active")
-                            );
+                        case DELIVERY_PARTNER -> {
+
+                            String q = "SELECT user_id,name,phone,password,is_available,is_active FROM users JOIN delivery_partner USING(user_id) WHERE user_id=?";
+
+                            try (PreparedStatement statement1 = connection.prepareStatement(q)) {
+
+                                statement1.setLong(1, id);
+
+                                try (ResultSet result = statement1.executeQuery()) {
+
+                                    if (result.next()) {
+
+                                        user = new DeliveryPartner(
+                                                result.getLong("user_id"),
+                                                result.getString("name"),
+                                                result.getLong("phone"),
+                                                result.getString("password"),
+                                                result.getBoolean("is_available"),
+                                                result.getBoolean("is_active")
+                                        );
+                                    }
+                                }
+                            }
+                        }
+
+                        case ADMIN -> {
+
+                            String q = "SELECT user_id,name,phone,password FROM users WHERE user_id=?";
+
+                            try (PreparedStatement statement1 = connection.prepareStatement(q)) {
+
+                                statement1.setLong(1, id);
+
+                                try (ResultSet result = statement1.executeQuery()) {
+
+                                    if (result.next()) {
+
+                                        user = new Admin(
+                                                result.getLong("user_id"),
+                                                result.getString("name"),
+                                                result.getLong("phone"),
+                                                result.getString("password")
+                                        );
+                                    }
+                                }
+                            }
                         }
                     }
-                    case ADMIN -> {
-                        String q = "SELECT user_id,name,phone,password FROM user WHERE user_id=?;";
-                        PreparedStatement statement1 = connection.prepareStatement(q);
-                        statement1.setLong(1, id);
-                        ResultSet result = statement1.executeQuery();
-                        if(result.next()){
-                            user = new Admin(
-                                    result.getLong("user_id"),
-                                    result.getString("name"),
-                                    result.getLong("phone"),
-                                    result.getString("password")
-                            );
-                        }
-                    }
+
+                    return user;
                 }
-
-                return user;
             }
 
         } catch (SQLException e) {
@@ -151,6 +176,7 @@ public class UserRepoImpl implements UserRepo {
         String sql = "";
 
         switch (type) {
+
             case CUSTOMER ->
                     sql = "SELECT user_id,name,phone,password,address FROM users JOIN customer USING(user_id) WHERE phone=?";
 
@@ -164,38 +190,42 @@ public class UserRepoImpl implements UserRepo {
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
 
             ps.setLong(1, phone);
-            ResultSet rs = ps.executeQuery();
 
-            if (rs.next()) {
+            try (ResultSet rs = ps.executeQuery()) {
 
-                switch (type) {
+                if (rs.next()) {
 
-                    case CUSTOMER -> {
-                        return new Customer(
-                                rs.getLong("user_id"),
-                                rs.getString("name"),
-                                rs.getLong("phone"),
-                                rs.getString("password"),
-                                rs.getString("address")
-                        );
-                    }
-                    case DELIVERY_PARTNER -> {
-                        return new DeliveryPartner(
-                                rs.getLong("user_id"),
-                                rs.getString("name"),
-                                rs.getLong("phone"),
-                                rs.getString("password"),
-                                rs.getBoolean("is_available"),
-                                rs.getBoolean("is_active")
-                        );
-                    }
-                    case ADMIN -> {
-                        return new Admin(
-                                rs.getLong("user_id"),
-                                rs.getString("name"),
-                                rs.getLong("phone"),
-                                rs.getString("password")
-                        );
+                    switch (type) {
+
+                        case CUSTOMER -> {
+                            return new Customer(
+                                    rs.getLong("user_id"),
+                                    rs.getString("name"),
+                                    rs.getLong("phone"),
+                                    rs.getString("password"),
+                                    rs.getString("address")
+                            );
+                        }
+
+                        case DELIVERY_PARTNER -> {
+                            return new DeliveryPartner(
+                                    rs.getLong("user_id"),
+                                    rs.getString("name"),
+                                    rs.getLong("phone"),
+                                    rs.getString("password"),
+                                    rs.getBoolean("is_available"),
+                                    rs.getBoolean("is_active")
+                            );
+                        }
+
+                        case ADMIN -> {
+                            return new Admin(
+                                    rs.getLong("user_id"),
+                                    rs.getString("name"),
+                                    rs.getLong("phone"),
+                                    rs.getString("password")
+                            );
+                        }
                     }
                 }
             }
@@ -210,7 +240,7 @@ public class UserRepoImpl implements UserRepo {
     @Override
     public boolean changePassword(long userId, String newPassword, UserType type) {
 
-        String sql = "UPDATE users SET password=? WHERE user_id=? AND user_type=?";
+        String sql = "UPDATE users SET password=? WHERE user_id=? AND user_type=?::user_type";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
 
@@ -232,7 +262,7 @@ public class UserRepoImpl implements UserRepo {
     @Override
     public boolean changePhoneNumber(long userId, long newPhone, UserType type) {
 
-        String sql = "UPDATE users SET phone=? WHERE user_id=? AND user_type=?";
+        String sql = "UPDATE users SET phone=? WHERE user_id=? AND user_type=?::user_type";
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
 
@@ -251,24 +281,54 @@ public class UserRepoImpl implements UserRepo {
         return false;
     }
 
-    public void addAdmin(Admin admin){
-        try{
-            String sql="INSERT INTO users(name,phone,password,user_type) VALUES (?,?,?,?) RETURNING user_id";
-            PreparedStatement statement=connection.prepareStatement(sql);
-            statement.setString(1,admin.getName());
-            statement.setLong(2,admin.getAccountInfo().getPhoneNumber());
-            statement.setString(3,admin.getAccountInfo().getPassword());
-            statement.setString(4,admin.getUserType().name());
+    public void addAdmin(Admin admin) {
 
-            ResultSet resultSet=statement.executeQuery();
+        try {
 
-            if(resultSet.next()){
-                String sql1="INSERT INTO admin(user_id) VALUES (?)";
-                PreparedStatement statement1=connection.prepareStatement(sql1);
-                statement1.setLong(1,resultSet.getLong("user_id"));
-                statement1.executeUpdate();
+            connection.setAutoCommit(false);
+
+            String sql = "INSERT INTO users(name,phone,password,user_type) VALUES (?,?,?,?::user_type) RETURNING user_id";
+
+            long userId = -1;
+
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
+
+                statement.setString(1, admin.getName());
+                statement.setLong(2, admin.getAccountInfo().getPhoneNumber());
+                statement.setString(3, admin.getAccountInfo().getPassword());
+                statement.setString(4, admin.getUserType().name());
+
+                try (ResultSet resultSet = statement.executeQuery()) {
+
+                    if (resultSet.next()) {
+                        userId = resultSet.getLong("user_id");
+                    }
+                }
             }
-        }catch (SQLException e){
+
+            if (userId != -1) {
+
+                String sql1 = "INSERT INTO admin(user_id) VALUES (?)";
+
+                try (PreparedStatement statement1 = connection.prepareStatement(sql1)) {
+
+                    statement1.setLong(1, userId);
+                    statement1.executeUpdate();
+                }
+            }
+
+            connection.commit();
+            connection.setAutoCommit(true);
+
+        } catch (SQLException e) {
+
+            try {
+                connection.rollback();
+                connection.setAutoCommit(true);
+            } catch (SQLException ex) {
+                System.out.println(ex.getMessage());
+            }
+
             System.out.println(e.getMessage());
         }
     }

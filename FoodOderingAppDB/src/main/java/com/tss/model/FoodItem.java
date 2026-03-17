@@ -23,6 +23,7 @@ public class FoodItem {
     }
 
     public FoodItem(long id,String name, double price, String cuisineName,boolean available,long cuisine_id) {
+        this.id=id;
         this.name = name;
         this.price = price;
         this.cuisine = new CuisineType(cuisine_id,cuisineName);

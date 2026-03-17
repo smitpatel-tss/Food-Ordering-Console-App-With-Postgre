@@ -68,24 +68,26 @@ public class OrderRepoImpl implements OrderRepo {
 
             connection.setAutoCommit(false);
 
-            long discountId = -1;
+            Long discountId = null;
 
             String sql1 = "INSERT INTO price_discount(minimum_amount,discount_percentage) VALUES (?,?) RETURNING discount_id";
 
-            try (PreparedStatement statement1 = connection.prepareStatement(sql1)) {
+            if (order.getPossibleDiscount() != null) {
+                try (PreparedStatement statement1 = connection.prepareStatement(sql1)) {
 
-                statement1.setDouble(1, order.getPossibleDiscount().getMinimumAmount());
-                statement1.setDouble(2, order.getPossibleDiscount().getDiscount());
+                    statement1.setDouble(1, order.getPossibleDiscount().getMinimumAmount());
+                    statement1.setDouble(2, order.getPossibleDiscount().getDiscount());
 
-                try (ResultSet resultSet1 = statement1.executeQuery()) {
+                    try (ResultSet resultSet1 = statement1.executeQuery()) {
 
-                    if (resultSet1.next()) {
-                        discountId = resultSet1.getLong("discount_id");
+                        if (resultSet1.next()) {
+                            discountId = resultSet1.getLong("discount_id");
+                        }
                     }
                 }
             }
 
-            String sql2 = "INSERT INTO orders(customer_id,final_amount,payment_mode,discount_id) VALUES(?,?,?,?) RETURNING order_id";
+            String sql2 = "INSERT INTO orders(customer_id,final_amount,payment_mode,discount_id) VALUES(?,?,?::payment_mode_type,?) RETURNING order_id";
 
             long orderId = -1;
 
@@ -94,7 +96,11 @@ public class OrderRepoImpl implements OrderRepo {
                 statement2.setLong(1, order.getCustomerId());
                 statement2.setDouble(2, order.getFinalAmount());
                 statement2.setString(3, order.getPaymentMode().getPaymentModeType().name());
-                statement2.setLong(4, discountId);
+                if (discountId == null) {
+                    statement2.setNull(4, java.sql.Types.BIGINT);
+                } else {
+                    statement2.setLong(4, discountId);
+                }
 
                 try (ResultSet resultSet2 = statement2.executeQuery()) {
 
@@ -140,46 +146,62 @@ public class OrderRepoImpl implements OrderRepo {
 
     @Override
     public List<Order> getAllOrders() {
-
         List<Order> orders = new ArrayList<>();
 
-        try {
+        String sql = """
+        SELECT 
+            o.order_id,
+            o.customer_id,
+            o.final_amount,
+            o.status,
+            o.payment_mode,
+            pd.minimum_amount,
+            pd.discount_percentage,
+            os.delivery_partner_id,
+            u_dp.name AS delivery_partner_name
+        FROM orders o
+        LEFT JOIN price_discount pd USING(discount_id)
+        LEFT JOIN order_assignment os ON o.order_id = os.order_id
+        LEFT JOIN users u_dp ON os.delivery_partner_id = u_dp.user_id
+    """;
 
-            String sql = "SELECT o.order_id,o.customer_id,o.final_amount,o.status,o.payment_mode, pd.minimum_amount, pd.discount_percentage FROM orders o JOIN price_discount pd USING(discount_id)";
+        try (PreparedStatement ps = connection.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
 
-            try (PreparedStatement ps = connection.prepareStatement(sql);
-                 ResultSet resultSet = ps.executeQuery()) {
+            while (rs.next()) {
+                long orderId = rs.getLong("order_id");
+                double amount = rs.getDouble("final_amount");
 
-                while (resultSet.next()) {
+                Cart cart = cartOfOrder(orderId);
 
-                    long orderId = resultSet.getLong("order_id");
-                    double amount = resultSet.getDouble("final_amount");
+                Discount discount = new PriceDiscount(
+                        rs.getDouble("minimum_amount"),
+                        rs.getDouble("discount_percentage")
+                );
 
-                    Cart cart = cartOfOrder(orderId);
+                PaymentModeType mode = PaymentModeType.valueOf(rs.getString("payment_mode"));
+                PaymentMode payment = mode.create(amount);
 
-                    Discount discount = new PriceDiscount(
-                            resultSet.getDouble("minimum_amount"),
-                            resultSet.getDouble("discount_percentage")
-                    );
+                OrderStatus status = OrderStatus.valueOf(rs.getString("status"));
 
-                    PaymentModeType mode = PaymentModeType.valueOf(resultSet.getString("payment_mode"));
-                    PaymentMode payment = mode.create(amount);
+                // Handle delivery partner safely
+                Long dpId = rs.getLong("delivery_partner_id");
+                if (rs.wasNull()) dpId = null;
 
-                    OrderStatus status = OrderStatus.valueOf(resultSet.getString("status"));
+                String dpName = rs.getString("delivery_partner_name");
+                if (dpName != null && dpName.isEmpty()) dpName = null;
 
-                    orders.add(
-                            new Order(
-                                    orderId,
-                                    discount,
-                                    cart,
-                                    payment,
-                                    resultSet.getLong("customer_id"),
-                                    status
-                            )
-                    );
-                }
+                orders.add(new Order(
+                        orderId,
+                        discount,
+                        cart,
+                        payment,
+                        rs.getLong("customer_id"),
+                        status,
+                        dpId,
+                        dpName
+                ));
             }
-
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
@@ -189,50 +211,64 @@ public class OrderRepoImpl implements OrderRepo {
 
     @Override
     public List<Order> ordersFromDeliveryAgentId(long deliveryPartnerId) {
-
         List<Order> orders = new ArrayList<>();
 
-        try {
+        String sql = """
+        SELECT 
+            o.order_id,
+            o.customer_id,
+            o.final_amount,
+            o.status,
+            o.payment_mode,
+            pd.minimum_amount,
+            pd.discount_percentage,
+            os.delivery_partner_id,
+            u_dp.name AS delivery_partner_name
+        FROM orders o
+        JOIN order_assignment os USING(order_id)
+        LEFT JOIN price_discount pd USING(discount_id)
+        LEFT JOIN users u_dp ON os.delivery_partner_id = u_dp.user_id
+        WHERE os.delivery_partner_id = ?
+    """;
 
-            String sql = "SELECT o.order_id,o.customer_id,o.final_amount,o.status,o.payment_mode, pd.minimum_amount, pd.discount_percentage FROM orders o JOIN order_assignment os USING(order_id) JOIN price_discount pd USING(discount_id) WHERE os.delivery_partner_id=?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setLong(1, deliveryPartnerId);
 
-            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    long orderId = rs.getLong("order_id");
+                    double amount = rs.getDouble("final_amount");
 
-                ps.setLong(1, deliveryPartnerId);
+                    Cart cart = cartOfOrder(orderId);
 
-                try (ResultSet resultSet = ps.executeQuery()) {
+                    Discount discount = new PriceDiscount(
+                            rs.getDouble("minimum_amount"),
+                            rs.getDouble("discount_percentage")
+                    );
 
-                    while (resultSet.next()) {
+                    PaymentModeType mode = PaymentModeType.valueOf(rs.getString("payment_mode"));
+                    PaymentMode payment = mode.create(amount);
 
-                        long orderId = resultSet.getLong("order_id");
-                        double amount = resultSet.getDouble("final_amount");
+                    OrderStatus status = OrderStatus.valueOf(rs.getString("status"));
 
-                        Cart cart = cartOfOrder(orderId);
+                    Long dpId = rs.getLong("delivery_partner_id");
+                    if (rs.wasNull()) dpId = null;
 
-                        Discount discount = new PriceDiscount(
-                                resultSet.getDouble("minimum_amount"),
-                                resultSet.getDouble("discount_percentage")
-                        );
+                    String dpName = rs.getString("delivery_partner_name");
+                    if (dpName != null && dpName.isEmpty()) dpName = null;
 
-                        PaymentModeType mode = PaymentModeType.valueOf(resultSet.getString("payment_mode"));
-                        PaymentMode payment = mode.create(amount);
-
-                        OrderStatus status = OrderStatus.valueOf(resultSet.getString("status"));
-
-                        orders.add(
-                                new Order(
-                                        orderId,
-                                        discount,
-                                        cart,
-                                        payment,
-                                        resultSet.getLong("customer_id"),
-                                        status
-                                )
-                        );
-                    }
+                    orders.add(new Order(
+                            orderId,
+                            discount,
+                            cart,
+                            payment,
+                            rs.getLong("customer_id"),
+                            status,
+                            dpId,
+                            dpName
+                    ));
                 }
             }
-
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
@@ -242,50 +278,59 @@ public class OrderRepoImpl implements OrderRepo {
 
     @Override
     public List<Order> ordersFromCustomerId(long customerId) {
-
         List<Order> orders = new ArrayList<>();
 
-        try {
+        String sql = """
+                    SELECT 
+                        o.order_id, o.customer_id,o.final_amount,
+                        o.status,o.payment_mode,pd.minimum_amount,pd.discount_percentage,
+                        os.delivery_partner_id,u_dp.name AS delivery_partner_name
+                    FROM orders o
+                    LEFT JOIN price_discount pd USING(discount_id)
+                    LEFT JOIN order_assignment os ON o.order_id = os.order_id
+                    LEFT JOIN users u_dp ON os.delivery_partner_id = u_dp.user_id
+                    WHERE o.customer_id=?
+                """;
 
-            String sql = "SELECT o.order_id,o.customer_id,o.final_amount,o.status,o.payment_mode, pd.minimum_amount, pd.discount_percentage FROM orders o JOIN price_discount pd USING(discount_id) WHERE o.customer_id=?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setLong(1, customerId);
 
-            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            try (ResultSet rs = ps.executeQuery()) {
 
-                ps.setLong(1, customerId);
+                while (rs.next()) {
+                    long orderId = rs.getLong("order_id");
+                    double amount = rs.getDouble("final_amount");
 
-                try (ResultSet resultSet = ps.executeQuery()) {
+                    Cart cart = cartOfOrder(orderId);
 
-                    while (resultSet.next()) {
+                    Discount discount = new PriceDiscount(
+                            rs.getDouble("minimum_amount"),
+                            rs.getDouble("discount_percentage")
+                    );
 
-                        long orderId = resultSet.getLong("order_id");
-                        double amount = resultSet.getDouble("final_amount");
+                    PaymentModeType mode = PaymentModeType.valueOf(rs.getString("payment_mode"));
+                    PaymentMode payment = mode.create(amount);
 
-                        Cart cart = cartOfOrder(orderId);
+                    OrderStatus status = OrderStatus.valueOf(rs.getString("status"));
 
-                        Discount discount = new PriceDiscount(
-                                resultSet.getDouble("minimum_amount"),
-                                resultSet.getDouble("discount_percentage")
-                        );
+                    Long dpId = rs.getLong("delivery_partner_id");
+                    if (rs.wasNull()) dpId = null;
 
-                        PaymentModeType mode = PaymentModeType.valueOf(resultSet.getString("payment_mode"));
-                        PaymentMode payment = mode.create(amount);
+                    String dpName = rs.getString("delivery_partner_name");
+                    if (dpName != null && dpName.isEmpty()) dpName = null;
 
-                        OrderStatus status = OrderStatus.valueOf(resultSet.getString("status"));
-
-                        orders.add(
-                                new Order(
-                                        orderId,
-                                        discount,
-                                        cart,
-                                        payment,
-                                        resultSet.getLong("customer_id"),
-                                        status
-                                )
-                        );
-                    }
+                    orders.add(new Order(
+                            orderId,
+                            discount,
+                            cart,
+                            payment,
+                            rs.getLong("customer_id"),
+                            status,
+                            dpId,
+                            dpName
+                    ));
                 }
             }
-
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
@@ -295,50 +340,64 @@ public class OrderRepoImpl implements OrderRepo {
 
     @Override
     public List<Order> getOrderFromStatus(OrderStatus orderStatus) {
-
         List<Order> orders = new ArrayList<>();
 
-        try {
+        String sql = """
+        SELECT 
+            o.order_id,
+            o.customer_id,
+            o.final_amount,
+            o.status,
+            o.payment_mode,
+            pd.minimum_amount,
+            pd.discount_percentage,
+            os.delivery_partner_id,
+            u_dp.name AS delivery_partner_name
+        FROM orders o
+        LEFT JOIN price_discount pd USING(discount_id)
+        LEFT JOIN order_assignment os ON o.order_id = os.order_id
+        LEFT JOIN users u_dp ON os.delivery_partner_id = u_dp.user_id
+        WHERE o.status = ?::order_status
+    """;
 
-            String sql = "SELECT o.order_id,o.customer_id,o.final_amount,o.status,o.payment_mode, pd.minimum_amount, pd.discount_percentage FROM orders o JOIN price_discount pd USING(discount_id) WHERE o.status=?";
+        try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            ps.setString(1, orderStatus.name());
 
-            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+            try (ResultSet rs = ps.executeQuery()) {
+                while (rs.next()) {
+                    long orderId = rs.getLong("order_id");
+                    double amount = rs.getDouble("final_amount");
 
-                ps.setString(1, orderStatus.toString());
+                    Cart cart = cartOfOrder(orderId);
 
-                try (ResultSet resultSet = ps.executeQuery()) {
+                    Discount discount = new PriceDiscount(
+                            rs.getDouble("minimum_amount"),
+                            rs.getDouble("discount_percentage")
+                    );
 
-                    while (resultSet.next()) {
+                    PaymentModeType mode = PaymentModeType.valueOf(rs.getString("payment_mode"));
+                    PaymentMode payment = mode.create(amount);
 
-                        long orderId = resultSet.getLong("order_id");
-                        double amount = resultSet.getDouble("final_amount");
+                    OrderStatus status = OrderStatus.valueOf(rs.getString("status"));
 
-                        Cart cart = cartOfOrder(orderId);
+                    Long dpId = rs.getLong("delivery_partner_id");
+                    if (rs.wasNull()) dpId = null;
 
-                        Discount discount = new PriceDiscount(
-                                resultSet.getDouble("minimum_amount"),
-                                resultSet.getDouble("discount_percentage")
-                        );
+                    String dpName = rs.getString("delivery_partner_name");
+                    if (dpName != null && dpName.isEmpty()) dpName = null;
 
-                        PaymentModeType mode = PaymentModeType.valueOf(resultSet.getString("payment_mode"));
-                        PaymentMode payment = mode.create(amount);
-
-                        OrderStatus status = OrderStatus.valueOf(resultSet.getString("status"));
-
-                        orders.add(
-                                new Order(
-                                        orderId,
-                                        discount,
-                                        cart,
-                                        payment,
-                                        resultSet.getLong("customer_id"),
-                                        status
-                                )
-                        );
-                    }
+                    orders.add(new Order(
+                            orderId,
+                            discount,
+                            cart,
+                            payment,
+                            rs.getLong("customer_id"),
+                            status,
+                            dpId,
+                            dpName
+                    ));
                 }
             }
-
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }

@@ -70,7 +70,12 @@ public class DeliveryPartnerService {
         if (confirmOrder == null) {
             throw new OrderNotFoundException("No Order Found with id " + orderId + "!");
         }
-        deliveryPartnerRepo.completeOrder(deliveryPartner.getId(),orderId);
+        try{
+            deliveryPartnerRepo.completeOrder(deliveryPartner.getId(),orderId);
+        }catch (RuntimeException e){
+            System.out.println(e.getMessage());
+            return;
+        }
         deliveryPartnerRepo.assignOrder();
 
         notificationService.sendNotification(
