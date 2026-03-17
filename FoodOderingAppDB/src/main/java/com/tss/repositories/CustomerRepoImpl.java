@@ -24,24 +24,30 @@ public class CustomerRepoImpl implements CustomerRepo {
             connection.setAutoCommit(false);
 
             String sql1 = "INSERT INTO users(name,user_type,phone,password) VALUES (?,?,?,?) RETURNING user_id";
-            PreparedStatement ps1 = connection.prepareStatement(sql1);
 
-            ps1.setString(1, customer.getName());
-            ps1.setString(2, customer.getUserType().name());
-            ps1.setLong(3, customer.getAccountInfo().getPhoneNumber());
-            ps1.setString(4, customer.getAccountInfo().getPassword());
+            try (PreparedStatement ps1 = connection.prepareStatement(sql1)) {
 
-            ResultSet resultSet = ps1.executeQuery();
-            resultSet.next();
+                ps1.setString(1, customer.getName());
+                ps1.setString(2, customer.getUserType().name());
+                ps1.setLong(3, customer.getAccountInfo().getPhoneNumber());
+                ps1.setString(4, customer.getAccountInfo().getPassword());
 
-            long id = resultSet.getLong("user_id");
+                try (ResultSet resultSet = ps1.executeQuery()) {
 
-            String sql2 = "INSERT INTO customer(user_id,address) VALUES (?,?) RETURNING user_id";
-            PreparedStatement ps2 = connection.prepareStatement(sql2);
+                    resultSet.next();
+                    long id = resultSet.getLong("user_id");
 
-            ps2.setLong(1, id);
-            ps2.setString(2, customer.getAddress());
-            ps2.executeUpdate();
+                    String sql2 = "INSERT INTO customer(user_id,address) VALUES (?,?)";
+
+                    try (PreparedStatement ps2 = connection.prepareStatement(sql2)) {
+
+                        ps2.setLong(1, id);
+                        ps2.setString(2, customer.getAddress());
+                        ps2.executeUpdate();
+                    }
+                }
+            }
+
             connection.commit();
 
         } catch (SQLException e) {
@@ -66,19 +72,22 @@ public class CustomerRepoImpl implements CustomerRepo {
 
         try {
             String sql = "select u.user_id,u.name,u.phone,address from customer c join users u using(user_id)";
-            PreparedStatement ps = connection.prepareStatement(sql);
-            ResultSet resultSet = ps.executeQuery();
 
-            while (resultSet.next()) {
-                customers.add(
-                        new Customer(
-                                resultSet.getInt("user_id"),
-                                resultSet.getString("name"),
-                                resultSet.getLong("phone"),
-                                resultSet.getString("address")
-                        )
-                );
+            try (PreparedStatement ps = connection.prepareStatement(sql);
+                 ResultSet resultSet = ps.executeQuery()) {
+
+                while (resultSet.next()) {
+                    customers.add(
+                            new Customer(
+                                    resultSet.getLong("user_id"),
+                                    resultSet.getString("name"),
+                                    resultSet.getLong("phone"),
+                                    resultSet.getString("address")
+                            )
+                    );
+                }
             }
+
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
@@ -89,20 +98,27 @@ public class CustomerRepoImpl implements CustomerRepo {
     @Override
     public Customer getCustomerById(long id) {
         Customer customer = null;
+
         try {
             String sql = "select u.user_id,u.name,u.phone,address from customer c join users u using(user_id) WHERE u.user_id=?";
-            PreparedStatement ps = connection.prepareStatement(sql);
-            ps.setLong(1, id);
-            ResultSet resultSet = ps.executeQuery();
 
-            while (resultSet.next()) {
-                customer = new Customer(
-                        resultSet.getInt("user_id"),
-                        resultSet.getString("name"),
-                        resultSet.getLong("phone"),
-                        resultSet.getString("address")
-                );
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+
+                ps.setLong(1, id);
+
+                try (ResultSet resultSet = ps.executeQuery()) {
+
+                    if (resultSet.next()) {
+                        customer = new Customer(
+                                resultSet.getLong("user_id"),
+                                resultSet.getString("name"),
+                                resultSet.getLong("phone"),
+                                resultSet.getString("address")
+                        );
+                    }
+                }
             }
+
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
@@ -115,11 +131,13 @@ public class CustomerRepoImpl implements CustomerRepo {
 
         try {
             String sql = "UPDATE customer SET address = ? WHERE user_id = ?";
-            PreparedStatement ps = connection.prepareStatement(sql);
 
-            ps.setString(1, address);
-            ps.setLong(2, userId);
-            ps.executeUpdate();
+            try (PreparedStatement ps = connection.prepareStatement(sql)) {
+
+                ps.setString(1, address);
+                ps.setLong(2, userId);
+                ps.executeUpdate();
+            }
 
         } catch (SQLException e) {
             System.out.println(e.getMessage());

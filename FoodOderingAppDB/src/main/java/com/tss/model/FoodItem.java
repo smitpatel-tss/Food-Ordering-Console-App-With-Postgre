@@ -60,19 +60,16 @@ public class FoodItem {
     public double getPrice() {
         return price;
     }
-
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
         if (!(o instanceof FoodItem)) return false;
-
-        FoodItem foodItem = (FoodItem) o;
-        return name.equals(foodItem.name);
+        FoodItem food = (FoodItem) o;
+        return id == food.id;
     }
 
     @Override
     public int hashCode() {
-        return name.hashCode();
+        return Long.hashCode(id);
     }
 }

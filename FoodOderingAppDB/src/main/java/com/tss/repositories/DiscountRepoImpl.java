@@ -3,7 +3,6 @@ package com.tss.repositories;
 import com.tss.config.DBConnection;
 import com.tss.model.Discount;
 import com.tss.model.PriceDiscount;
-import com.tss.model.users.DeliveryPartner;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -13,36 +12,37 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class DiscountRepoImpl implements DiscountRepo {
+
     private Connection connection;
 
-    public DiscountRepoImpl(){
-        connection= DBConnection.connect();
+    public DiscountRepoImpl() {
+        connection = DBConnection.connect();
     }
 
     @Override
     public void addNewPriceDiscount(Discount discount) {
-        try{
-            String sql="INSERT INTO price_discount(minimum_amount, discount_percentage) VALUES (?,?)";
-            PreparedStatement statement= connection.prepareStatement(sql);
+        String sql = "INSERT INTO price_discount(minimum_amount, discount_percentage) VALUES (?, ?)";
 
-            statement.setDouble(1,discount.getMinimumAmount());
-            statement.setDouble(2,discount.getDiscount());
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setDouble(1, discount.getMinimumAmount());
+            statement.setDouble(2, discount.getDiscount());
 
             statement.executeUpdate();
 
-        }catch (SQLException e){
+        } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
     }
 
     @Override
     public List<Discount> getAllDiscounts() {
-        List<Discount> discounts=new ArrayList<>();
 
-        try {
-            String sql = "select minimum_amount,discount_percentage FROM price_discount";
-            PreparedStatement ps = connection.prepareStatement(sql);
-            ResultSet resultSet = ps.executeQuery();
+        List<Discount> discounts = new ArrayList<>();
+        String sql = "SELECT minimum_amount, discount_percentage FROM price_discount";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql);
+             ResultSet resultSet = ps.executeQuery()) {
 
             while (resultSet.next()) {
                 discounts.add(
@@ -52,21 +52,24 @@ public class DiscountRepoImpl implements DiscountRepo {
                         )
                 );
             }
+
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
+
         return discounts;
     }
 
+    @Override
     public Discount giveMaxPossibleDiscount(double amount) {
 
         String sql = """
-        SELECT discount_id, minimum_amount, discount_percentage
-        FROM price_discount
-        WHERE minimum_amount <= ?
-        ORDER BY discount_percentage DESC
-        LIMIT 1
-    """;
+                SELECT discount_id, minimum_amount, discount_percentage
+                FROM price_discount
+                WHERE minimum_amount <= ?
+                ORDER BY discount_percentage DESC
+                LIMIT 1
+                """;
 
         try (PreparedStatement ps = connection.prepareStatement(sql)) {
 
@@ -84,7 +87,7 @@ public class DiscountRepoImpl implements DiscountRepo {
             }
 
         } catch (SQLException e) {
-            System.out.println(e.getMessage());;
+            System.out.println(e.getMessage());
         }
 
         return null;

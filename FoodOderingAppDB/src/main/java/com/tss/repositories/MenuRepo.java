@@ -9,7 +9,7 @@ import java.util.List;
 public interface MenuRepo {
     void addNewFoodItem(FoodItem foodItem);
     void addNewCuisine(String name);
-    List<CuisineType> getALlCuisines();
+    List<CuisineType> getAllCuisines();
     List<FoodItem> getAllFoodItems(long cuisineId);
     FoodItem getItemFromId(long itemId);
     boolean removeItem(long itemId);

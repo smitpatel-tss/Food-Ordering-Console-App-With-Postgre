@@ -13,6 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class NotificationRepoImpl implements NotificationRepo {
+
     private Connection connection;
 
     public NotificationRepoImpl() {
@@ -21,9 +22,10 @@ public class NotificationRepoImpl implements NotificationRepo {
 
     @Override
     public void sendNotification(Notification notification) {
-        try {
-            String sql = "INSERT INTO notification(user_id,message,sender,receiver) VALUES(?,?,?,?)";
-            PreparedStatement statement = connection.prepareStatement(sql);
+
+        String sql = "INSERT INTO notification(user_id,message,sender,receiver) VALUES(?,?,?,?)";
+
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
 
             statement.setLong(1, notification.getUserId());
             statement.setString(2, notification.getMessage());
@@ -31,6 +33,7 @@ public class NotificationRepoImpl implements NotificationRepo {
             statement.setString(4, notification.getReceiver().name());
 
             statement.executeUpdate();
+
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
@@ -38,22 +41,29 @@ public class NotificationRepoImpl implements NotificationRepo {
 
     @Override
     public List<Notification> getAllUnseenNotifications(long userId) {
-        List<Notification> notifications = new ArrayList<>();
-        try {
-            String sql0 = "SELECT user_type, total_seen_notifications FROM users WHERE user_id=?";
-            PreparedStatement statement0 = connection.prepareStatement(sql0);
-            statement0.setLong(1, userId);
 
-            ResultSet rs0 = statement0.executeQuery();
+        List<Notification> notifications = new ArrayList<>();
+
+        try {
+
+            String sql0 = "SELECT user_type, total_seen_notifications FROM users WHERE user_id=?";
 
             int seenNotifications = 0;
-            UserType userType = null;
+            UserType userType;
 
-            if (rs0.next()) {
-                seenNotifications = rs0.getInt("total_seen_notifications");
-                userType = UserType.valueOf(rs0.getString("user_type"));
-            } else {
-                throw new UserNotFoundException("User Not Exist!");
+            try (PreparedStatement statement0 = connection.prepareStatement(sql0)) {
+
+                statement0.setLong(1, userId);
+
+                try (ResultSet rs0 = statement0.executeQuery()) {
+
+                    if (rs0.next()) {
+                        seenNotifications = rs0.getInt("total_seen_notifications");
+                        userType = UserType.valueOf(rs0.getString("user_type"));
+                    } else {
+                        throw new UserNotFoundException("User Not Exist!");
+                    }
+                }
             }
 
             String sql = """
@@ -67,21 +77,26 @@ public class NotificationRepoImpl implements NotificationRepo {
                     OFFSET ?
                     """;
 
-            PreparedStatement statement = connection.prepareStatement(sql);
-            statement.setLong(1, userId);
-            statement.setString(2, userType.name());
-            statement.setString(3, userType.name());
-            statement.setInt(4, seenNotifications);
+            try (PreparedStatement statement = connection.prepareStatement(sql)) {
 
-            ResultSet rs = statement.executeQuery();
+                statement.setLong(1, userId);
+                statement.setString(2, userType.name());
+                statement.setString(3, userType.name());
+                statement.setInt(4, seenNotifications);
 
-            while (rs.next()) {
-                notifications.add(new Notification(
-                        rs.getLong("user_id"),
-                        rs.getString("message"),
-                        UserType.valueOf(rs.getString("sender")),
-                        UserType.valueOf(rs.getString("receiver"))
-                ));
+                try (ResultSet rs = statement.executeQuery()) {
+
+                    while (rs.next()) {
+                        notifications.add(
+                                new Notification(
+                                        rs.getLong("user_id"),
+                                        rs.getString("message"),
+                                        UserType.valueOf(rs.getString("sender")),
+                                        UserType.valueOf(rs.getString("receiver"))
+                                )
+                        );
+                    }
+                }
             }
 
             int newSeen = seenNotifications + notifications.size();
@@ -92,33 +107,44 @@ public class NotificationRepoImpl implements NotificationRepo {
                     WHERE user_id = ?
                     """;
 
-            PreparedStatement updateStmt = connection.prepareStatement(updateSql);
-            updateStmt.setInt(1, newSeen);
-            updateStmt.setLong(2, userId);
-            updateStmt.executeUpdate();
+            try (PreparedStatement updateStmt = connection.prepareStatement(updateSql)) {
+
+                updateStmt.setInt(1, newSeen);
+                updateStmt.setLong(2, userId);
+
+                updateStmt.executeUpdate();
+            }
 
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
+
         return notifications;
     }
 
     @Override
     public List<Notification> getAllNotifications(long userId) {
+
         List<Notification> notifications = new ArrayList<>();
 
         try {
+
             String sql0 = "SELECT user_type FROM users WHERE user_id=?";
-            PreparedStatement stmt0 = connection.prepareStatement(sql0);
-            stmt0.setLong(1, userId);
 
-            ResultSet rs0 = stmt0.executeQuery();
+            UserType userType;
 
-            UserType userType = null;
-            if (rs0.next()) {
-                userType = UserType.valueOf(rs0.getString("user_type"));
-            } else {
-                throw new UserNotFoundException("User Not Exist!");
+            try (PreparedStatement stmt0 = connection.prepareStatement(sql0)) {
+
+                stmt0.setLong(1, userId);
+
+                try (ResultSet rs0 = stmt0.executeQuery()) {
+
+                    if (rs0.next()) {
+                        userType = UserType.valueOf(rs0.getString("user_type"));
+                    } else {
+                        throw new UserNotFoundException("User Not Exist!");
+                    }
+                }
             }
 
             String sql = """
@@ -131,20 +157,25 @@ public class NotificationRepoImpl implements NotificationRepo {
                     ORDER BY created_at
                     """;
 
-            PreparedStatement stmt = connection.prepareStatement(sql);
-            stmt.setLong(1, userId);
-            stmt.setString(2, userType.name());
-            stmt.setString(3, userType.name());
+            try (PreparedStatement stmt = connection.prepareStatement(sql)) {
 
-            ResultSet rs = stmt.executeQuery();
+                stmt.setLong(1, userId);
+                stmt.setString(2, userType.name());
+                stmt.setString(3, userType.name());
 
-            while (rs.next()) {
-                notifications.add(new Notification(
-                        rs.getLong("user_id"),
-                        rs.getString("message"),
-                        UserType.valueOf(rs.getString("sender")),
-                        UserType.valueOf(rs.getString("receiver"))
-                ));
+                try (ResultSet rs = stmt.executeQuery()) {
+
+                    while (rs.next()) {
+                        notifications.add(
+                                new Notification(
+                                        rs.getLong("user_id"),
+                                        rs.getString("message"),
+                                        UserType.valueOf(rs.getString("sender")),
+                                        UserType.valueOf(rs.getString("receiver"))
+                                )
+                        );
+                    }
+                }
             }
 
         } catch (SQLException e) {

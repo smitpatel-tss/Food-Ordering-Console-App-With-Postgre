@@ -17,19 +17,23 @@ public class CartRepoImpl implements CartRepo {
         connection= DBConnection.connect();
     }
 
-
     public Long getCartIdByUserId(long userId){
 
         try{
             String query = "SELECT cart_id FROM carts WHERE user_id = ?";
-            PreparedStatement ps = connection.prepareStatement(query);
-            ps.setLong(1, userId);
 
-            ResultSet rs = ps.executeQuery();
+            try (PreparedStatement ps = connection.prepareStatement(query)) {
 
-            if (rs.next()) {
-                return rs.getLong("cart_id");
+                ps.setLong(1, userId);
+
+                try (ResultSet rs = ps.executeQuery()) {
+
+                    if (rs.next()) {
+                        return rs.getLong("cart_id");
+                    }
+                }
             }
+
         }catch (SQLException e){
             System.out.println(e.getMessage());
         }
@@ -42,14 +46,18 @@ public class CartRepoImpl implements CartRepo {
         try{
             String query = "INSERT INTO carts(user_id) VALUES (?) RETURNING cart_id";
 
-            PreparedStatement ps = connection.prepareStatement(query);
-            ps.setLong(1, userId);
+            try (PreparedStatement ps = connection.prepareStatement(query)) {
 
-            ResultSet rs = ps.executeQuery();
+                ps.setLong(1, userId);
 
-            if (rs.next()) {
-                return rs.getLong("cart_id");
+                try (ResultSet rs = ps.executeQuery()) {
+
+                    if (rs.next()) {
+                        return rs.getLong("cart_id");
+                    }
+                }
             }
+
         }catch (SQLException e){
             System.out.println(e.getMessage());
         }
@@ -59,45 +67,53 @@ public class CartRepoImpl implements CartRepo {
 
     @Override
     public void addItemToCart(long userId, long foodItemId, int quantity) {
+
         try{
 
-            Long cartId = getCartIdByUserId( userId);
+            Long cartId = getCartIdByUserId(userId);
 
             if (cartId == null) {
-                cartId = createCart( userId);
+                cartId = createCart(userId);
             }
 
             String checkItem = "SELECT quantity FROM cart_items WHERE cart_id=? AND food_item_id=?";
-            PreparedStatement ps1 = connection.prepareStatement(checkItem);
 
-            ps1.setLong(1, cartId);
-            ps1.setLong(2, foodItemId);
+            try (PreparedStatement ps1 = connection.prepareStatement(checkItem)) {
 
-            ResultSet rs = ps1.executeQuery();
+                ps1.setLong(1, cartId);
+                ps1.setLong(2, foodItemId);
 
-            if (rs.next()) {
+                try (ResultSet rs = ps1.executeQuery()) {
 
-                int currentQuantity = rs.getInt("quantity");
+                    if (rs.next()) {
 
-                String update = "UPDATE cart_items SET quantity=? WHERE cart_id=? AND food_item_id=?";
-                PreparedStatement ps2 = connection.prepareStatement(update);
+                        int currentQuantity = rs.getInt("quantity");
 
-                ps2.setInt(1, currentQuantity + quantity);
-                ps2.setLong(2, cartId);
-                ps2.setLong(3, foodItemId);
+                        String update = "UPDATE cart_items SET quantity=? WHERE cart_id=? AND food_item_id=?";
 
-                ps2.executeUpdate();
+                        try (PreparedStatement ps2 = connection.prepareStatement(update)) {
 
-            } else {
+                            ps2.setInt(1, currentQuantity + quantity);
+                            ps2.setLong(2, cartId);
+                            ps2.setLong(3, foodItemId);
 
-                String insert = "INSERT INTO cart_items(cart_id, food_item_id, quantity) VALUES (?, ?, ?)";
-                PreparedStatement ps3 = connection.prepareStatement(insert);
+                            ps2.executeUpdate();
+                        }
 
-                ps3.setLong(1, cartId);
-                ps3.setLong(2, foodItemId);
-                ps3.setInt(3, quantity);
+                    } else {
 
-                ps3.executeUpdate();
+                        String insert = "INSERT INTO cart_items(cart_id, food_item_id, quantity) VALUES (?, ?, ?)";
+
+                        try (PreparedStatement ps3 = connection.prepareStatement(insert)) {
+
+                            ps3.setLong(1, cartId);
+                            ps3.setLong(2, foodItemId);
+                            ps3.setInt(3, quantity);
+
+                            ps3.executeUpdate();
+                        }
+                    }
+                }
             }
 
         }catch (SQLException e){
@@ -116,37 +132,44 @@ public class CartRepoImpl implements CartRepo {
             }
 
             String checkQuery = "SELECT quantity FROM cart_items WHERE cart_id=? AND food_item_id=?";
-            PreparedStatement ps1 = connection.prepareStatement(checkQuery);
 
-            ps1.setLong(1, cartId);
-            ps1.setLong(2, foodItemId);
+            try (PreparedStatement ps1 = connection.prepareStatement(checkQuery)) {
 
-            ResultSet rs = ps1.executeQuery();
+                ps1.setLong(1, cartId);
+                ps1.setLong(2, foodItemId);
 
-            if (rs.next()) {
+                try (ResultSet rs = ps1.executeQuery()) {
 
-                int currentQty = rs.getInt("quantity");
+                    if (rs.next()) {
 
-                if (currentQty <= quantity) {
+                        int currentQty = rs.getInt("quantity");
 
-                    String deleteQuery = "DELETE FROM cart_items WHERE cart_id=? AND food_item_id=?";
-                    PreparedStatement ps2 = connection.prepareStatement(deleteQuery);
+                        if (currentQty <= quantity) {
 
-                    ps2.setLong(1, cartId);
-                    ps2.setLong(2, foodItemId);
+                            String deleteQuery = "DELETE FROM cart_items WHERE cart_id=? AND food_item_id=?";
 
-                    ps2.executeUpdate();
+                            try (PreparedStatement ps2 = connection.prepareStatement(deleteQuery)) {
 
-                } else {
+                                ps2.setLong(1, cartId);
+                                ps2.setLong(2, foodItemId);
 
-                    String updateQuery = "UPDATE cart_items SET quantity=? WHERE cart_id=? AND food_item_id=?";
-                    PreparedStatement ps3 = connection.prepareStatement(updateQuery);
+                                ps2.executeUpdate();
+                            }
 
-                    ps3.setInt(1, currentQty - quantity);
-                    ps3.setLong(2, cartId);
-                    ps3.setLong(3, foodItemId);
+                        } else {
 
-                    ps3.executeUpdate();
+                            String updateQuery = "UPDATE cart_items SET quantity=? WHERE cart_id=? AND food_item_id=?";
+
+                            try (PreparedStatement ps3 = connection.prepareStatement(updateQuery)) {
+
+                                ps3.setInt(1, currentQty - quantity);
+                                ps3.setLong(2, cartId);
+                                ps3.setLong(3, foodItemId);
+
+                                ps3.executeUpdate();
+                            }
+                        }
+                    }
                 }
             }
 
@@ -160,24 +183,24 @@ public class CartRepoImpl implements CartRepo {
 
         try  {
 
-            Long cartId = getCartIdByUserId( userId);
+            Long cartId = getCartIdByUserId(userId);
 
             if (cartId == null) {
                 return;
             }
 
             String query = "DELETE FROM cart_items WHERE cart_id = ?";
-            PreparedStatement ps = connection.prepareStatement(query);
 
-            ps.setLong(1, cartId);
+            try (PreparedStatement ps = connection.prepareStatement(query)) {
 
-            ps.executeUpdate();
+                ps.setLong(1, cartId);
+                ps.executeUpdate();
+            }
 
         } catch (SQLException e) {
-            throw new RuntimeException(e);
+            System.out.println(e.getMessage());
         }
     }
-
 
     @Override
     public Cart getCart(long userId) {
@@ -200,39 +223,42 @@ public class CartRepoImpl implements CartRepo {
             WHERE ci.cart_id = ?
         """;
 
-            PreparedStatement ps = connection.prepareStatement(query);
-            ps.setLong(1, cartId);
+            try (PreparedStatement ps = connection.prepareStatement(query)) {
 
-            ResultSet rs = ps.executeQuery();
+                ps.setLong(1, cartId);
 
-            HashMap<FoodItem, Integer> items = new HashMap<>();
-            double totalPrice = 0;
+                try (ResultSet rs = ps.executeQuery()) {
 
-            while (rs.next()) {
+                    HashMap<FoodItem, Integer> items = new HashMap<>();
+                    double totalPrice = 0;
 
-                long foodId = rs.getLong("food_item_id");
-                String name = rs.getString("name");
-                double price = rs.getDouble("price");
-                boolean available = rs.getBoolean("available");
-                long cuisineId = rs.getLong("cuisine_id");
-                String cuisineName = rs.getString("cuisine_name");
-                int quantity = rs.getInt("quantity");
+                    while (rs.next()) {
 
-                FoodItem foodItem = new FoodItem(
-                        foodId,
-                        name,
-                        price,
-                        cuisineName,
-                        available,
-                        cuisineId
-                );
+                        long foodId = rs.getLong("food_item_id");
+                        String name = rs.getString("name");
+                        double price = rs.getDouble("price");
+                        boolean available = rs.getBoolean("available");
+                        long cuisineId = rs.getLong("cuisine_id");
+                        String cuisineName = rs.getString("cuisine_name");
+                        int quantity = rs.getInt("quantity");
 
-                items.put(foodItem, quantity);
+                        FoodItem foodItem = new FoodItem(
+                                foodId,
+                                name,
+                                price,
+                                cuisineName,
+                                available,
+                                cuisineId
+                        );
 
-                totalPrice += price * quantity;
+                        items.put(foodItem, quantity);
+
+                        totalPrice += price * quantity;
+                    }
+
+                    return new Cart(items, totalPrice);
+                }
             }
-
-            return new Cart(items, totalPrice);
 
         } catch (SQLException e) {
             System.out.println(e.getMessage());
@@ -252,19 +278,22 @@ public class CartRepoImpl implements CartRepo {
             }
 
             String query = """
-            SELECT SUM(f.price * ci.quantity) AS total
+            SELECT COALESCE(SUM(f.price * ci.quantity),0) AS total
             FROM cart_items ci
             JOIN food_item f ON ci.food_item_id = f.food_item_id
             WHERE ci.cart_id = ?
         """;
 
-            PreparedStatement ps = connection.prepareStatement(query);
-            ps.setLong(1, cartId);
+            try (PreparedStatement ps = connection.prepareStatement(query)) {
 
-            ResultSet rs = ps.executeQuery();
+                ps.setLong(1, cartId);
 
-            if (rs.next()) {
-                return rs.getDouble("total");
+                try (ResultSet rs = ps.executeQuery()) {
+
+                    if (rs.next()) {
+                        return rs.getDouble("total");
+                    }
+                }
             }
 
         } catch (SQLException e) {
@@ -276,6 +305,7 @@ public class CartRepoImpl implements CartRepo {
 
     @Override
     public boolean isCartEmpty(long userId) {
+
         try {
 
             Long cartId = getCartIdByUserId(userId);
@@ -284,13 +314,15 @@ public class CartRepoImpl implements CartRepo {
             }
 
             String query = "SELECT 1 FROM cart_items WHERE cart_id = ?";
-            PreparedStatement ps = connection.prepareStatement(query);
 
-            ps.setLong(1, cartId);
+            try (PreparedStatement ps = connection.prepareStatement(query)) {
 
-            ResultSet rs = ps.executeQuery();
+                ps.setLong(1, cartId);
 
-            return !rs.next();
+                try (ResultSet rs = ps.executeQuery()) {
+                    return !rs.next();
+                }
+            }
 
         } catch (SQLException e) {
             System.out.println(e.getMessage());

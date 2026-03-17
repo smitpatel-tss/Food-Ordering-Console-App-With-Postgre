@@ -74,7 +74,7 @@ public class MenuService {
     }
 
     public List<CuisineType> getAllCuisines(){
-        return menuRepo.getALlCuisines();
+        return menuRepo.getAllCuisines();
     }
 
     public boolean isEmpty(){

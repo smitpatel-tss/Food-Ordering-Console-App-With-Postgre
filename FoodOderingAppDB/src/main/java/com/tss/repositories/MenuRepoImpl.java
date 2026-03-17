@@ -12,24 +12,24 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
-public class MenuRepoImpl implements MenuRepo{
+public class MenuRepoImpl implements MenuRepo {
 
     private Connection connection;
-    public MenuRepoImpl(){
-        connection= DBConnection.connect();
-    }
 
+    public MenuRepoImpl() {
+        connection = DBConnection.connect();
+    }
 
     @Override
     public void addNewFoodItem(FoodItem foodItem) {
 
-        try{
-            String sql="INSERT INTO food_item(cuisine_id,name,price) VALUES(?,?,?)";
-            PreparedStatement statement=connection.prepareStatement(sql);
+        String sql = "INSERT INTO food_item(cuisine_id,name,price) VALUES(?,?,?)";
 
-            statement.setLong(1,foodItem.getCuisine().getId());
-            statement.setString(2,foodItem.getName());
-            statement.setDouble(3,foodItem.getPrice());
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setLong(1, foodItem.getCuisine().getId());
+            statement.setString(2, foodItem.getName());
+            statement.setDouble(3, foodItem.getPrice());
 
             statement.executeUpdate();
 
@@ -40,11 +40,12 @@ public class MenuRepoImpl implements MenuRepo{
 
     @Override
     public void addNewCuisine(String name) {
-        try{
-            String sql="INSERT INTO cuisine(name) VALUES(?)";
-            PreparedStatement statement=connection.prepareStatement(sql);
 
-            statement.setString(1,name);
+        String sql = "INSERT INTO cuisine(name) VALUES(?)";
+
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setString(1, name);
             statement.executeUpdate();
 
         } catch (SQLException e) {
@@ -53,49 +54,62 @@ public class MenuRepoImpl implements MenuRepo{
     }
 
     @Override
-    public List<CuisineType> getALlCuisines() {
-        List<CuisineType> cuisines=new ArrayList<>();
+    public List<CuisineType> getAllCuisines() {
 
-        try{
-            String sql="SELECT cuisine_id,name FROM cuisine";
-            PreparedStatement statement=connection.prepareStatement(sql);
+        List<CuisineType> cuisines = new ArrayList<>();
+        String sql = "SELECT cuisine_id,name FROM cuisine";
 
-            ResultSet resultSet=statement.executeQuery();
+        try (PreparedStatement statement = connection.prepareStatement(sql);
+             ResultSet resultSet = statement.executeQuery()) {
 
-            while(resultSet.next()){
-                cuisines.add(new CuisineType(resultSet.getLong("cuisine_id"),
-                        resultSet.getString("name")));
+            while (resultSet.next()) {
+                cuisines.add(
+                        new CuisineType(
+                                resultSet.getLong("cuisine_id"),
+                                resultSet.getString("name")
+                        )
+                );
             }
 
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
+
         return cuisines;
     }
 
     @Override
     public List<FoodItem> getAllFoodItems(long cuisineId) {
-        List<FoodItem> foodItems=new ArrayList<>();
 
-        try{
-            String sql="SELECT fi.food_item_id,fi.cuisine_id,fi.name as name,fi.price,fi.available,c.name as cuisine_name FROM food_item fi JOIN cuisine c USING(cuisine_id) where fi.cuisine_id=?";
-            PreparedStatement statement=connection.prepareStatement(sql);
+        List<FoodItem> foodItems = new ArrayList<>();
 
-            statement.setLong(1,cuisineId);
-            ResultSet resultSet=statement.executeQuery();
+        String sql = "SELECT fi.food_item_id,fi.cuisine_id,fi.name as name,fi.price,fi.available,c.name as cuisine_name FROM food_item fi JOIN cuisine c USING(cuisine_id) where fi.cuisine_id=?";
 
-            while(resultSet.next()){
-                foodItems.add(new FoodItem(resultSet.getLong("food_item_id"),
-                        resultSet.getString("name"),
-                        resultSet.getDouble("price"),
-                        resultSet.getString("cuisine_name"),
-                        resultSet.getBoolean("available"),
-                        resultSet.getLong("cuisine_id")));
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setLong(1, cuisineId);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+
+                while (resultSet.next()) {
+
+                    foodItems.add(
+                            new FoodItem(
+                                    resultSet.getLong("food_item_id"),
+                                    resultSet.getString("name"),
+                                    resultSet.getDouble("price"),
+                                    resultSet.getString("cuisine_name"),
+                                    resultSet.getBoolean("available"),
+                                    resultSet.getLong("cuisine_id")
+                            )
+                    );
+                }
             }
 
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
+
         return foodItems;
     }
 
@@ -117,32 +131,33 @@ public class MenuRepoImpl implements MenuRepo{
                 ON c.cuisine_id = fi.cuisine_id
                 """;
 
-            PreparedStatement ps = connection.prepareStatement(sql);
-            ResultSet rs = ps.executeQuery();
+            try (PreparedStatement ps = connection.prepareStatement(sql);
+                 ResultSet rs = ps.executeQuery()) {
 
-            while (rs.next()) {
+                while (rs.next()) {
 
-                long cuisineId = rs.getLong("cuisine_id");
-                String cuisineName = rs.getString("cuisine_name");
+                    long cuisineId = rs.getLong("cuisine_id");
+                    String cuisineName = rs.getString("cuisine_name");
 
-                CuisineType cuisine = new CuisineType(cuisineId, cuisineName);
+                    CuisineType cuisine = new CuisineType(cuisineId, cuisineName);
 
-                menu.putIfAbsent(cuisine, new ArrayList<>());
+                    menu.putIfAbsent(cuisine, new ArrayList<>());
 
-                long foodId = rs.getLong("food_item_id");
+                    long foodId = rs.getLong("food_item_id");
 
-                if (!rs.wasNull()) {
+                    if (!rs.wasNull()) {
 
-                    FoodItem foodItem = new FoodItem(
-                            foodId,
-                            rs.getString("food_name"),
-                            rs.getDouble("price"),
-                            cuisineName,
-                            rs.getBoolean("available"),
-                            cuisineId
-                    );
+                        FoodItem foodItem = new FoodItem(
+                                foodId,
+                                rs.getString("food_name"),
+                                rs.getDouble("price"),
+                                cuisineName,
+                                rs.getBoolean("available"),
+                                cuisineId
+                        );
 
-                    menu.get(cuisine).add(foodItem);
+                        menu.get(cuisine).add(foodItem);
+                    }
                 }
             }
 
@@ -155,35 +170,43 @@ public class MenuRepoImpl implements MenuRepo{
 
     @Override
     public FoodItem getItemFromId(long itemId) {
-        FoodItem foodItem=null;
-        try{
-            String sql="SELECT fi.food_item_id,fi.cuisine_id,fi.name as name,fi.price,fi.available,c.name as cuisine_name FROM food_item fi JOIN cuisine c USING(cuisine_id) where fi.food_item_id=?";
-            PreparedStatement statement=connection.prepareStatement(sql);
 
-            statement.setLong(1,itemId);
-            ResultSet resultSet=statement.executeQuery();
+        FoodItem foodItem = null;
 
-            if(resultSet.next()){
-                foodItem=new FoodItem(resultSet.getLong("food_item_id"),
-                        resultSet.getString("name"),
-                        resultSet.getDouble("price"),
-                        resultSet.getString("cuisine_name"),
-                        resultSet.getBoolean("available"),
-                        resultSet.getLong("cuisine_id"));
+        String sql = "SELECT fi.food_item_id,fi.cuisine_id,fi.name as name,fi.price,fi.available,c.name as cuisine_name FROM food_item fi JOIN cuisine c USING(cuisine_id) where fi.food_item_id=?";
+
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
+
+            statement.setLong(1, itemId);
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+
+                if (resultSet.next()) {
+
+                    foodItem = new FoodItem(
+                            resultSet.getLong("food_item_id"),
+                            resultSet.getString("name"),
+                            resultSet.getDouble("price"),
+                            resultSet.getString("cuisine_name"),
+                            resultSet.getBoolean("available"),
+                            resultSet.getLong("cuisine_id")
+                    );
+                }
             }
 
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
+
         return foodItem;
     }
 
     @Override
     public boolean removeItem(long itemId) {
 
-        try {
-            String sql = "DELETE FROM food_item WHERE food_item_id=?";
-            PreparedStatement statement = connection.prepareStatement(sql);
+        String sql = "DELETE FROM food_item WHERE food_item_id=?";
+
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
 
             statement.setLong(1, itemId);
 
@@ -197,12 +220,13 @@ public class MenuRepoImpl implements MenuRepo{
 
         return false;
     }
+
     @Override
     public boolean removeCuisine(long cuisineId) {
 
-        try {
-            String sql = "DELETE FROM cuisine WHERE cuisine_id=?";
-            PreparedStatement statement = connection.prepareStatement(sql);
+        String sql = "DELETE FROM cuisine WHERE cuisine_id=?";
+
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
 
             statement.setLong(1, cuisineId);
 
@@ -220,9 +244,9 @@ public class MenuRepoImpl implements MenuRepo{
     @Override
     public void changePrice(long id, double newPrice) {
 
-        try {
-            String sql = "UPDATE food_item SET price=? WHERE food_item_id=?";
-            PreparedStatement statement = connection.prepareStatement(sql);
+        String sql = "UPDATE food_item SET price=? WHERE food_item_id=?";
+
+        try (PreparedStatement statement = connection.prepareStatement(sql)) {
 
             statement.setDouble(1, newPrice);
             statement.setLong(2, id);
@@ -236,16 +260,18 @@ public class MenuRepoImpl implements MenuRepo{
 
     @Override
     public boolean isMenuEmpty() {
-        try {
-            String sql = "SELECT 1 FROM food_item WHERE available=true";
-            PreparedStatement ps = connection.prepareStatement(sql);
-            ResultSet rs = ps.executeQuery();
+
+        String sql = "SELECT 1 FROM food_item WHERE available=true";
+
+        try (PreparedStatement ps = connection.prepareStatement(sql);
+             ResultSet rs = ps.executeQuery()) {
 
             return !rs.next();
 
         } catch (SQLException e) {
             System.out.println(e.getMessage());
         }
+
         return true;
     }
 }
