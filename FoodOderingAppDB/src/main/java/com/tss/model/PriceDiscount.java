@@ -4,12 +4,10 @@ public class PriceDiscount implements Discount {
     private double minimumAmount;
     private double discount;
     private int id;
-    private static int discountIdCounter = 1;
 
     public PriceDiscount(double minimumAmount, double discount) {
         this.minimumAmount = minimumAmount;
         this.discount = discount;
-        this.id = discountIdCounter++;
     }
 
     public PriceDiscount(int id,double minimumAmount, double discount) {

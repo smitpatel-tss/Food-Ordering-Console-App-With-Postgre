@@ -1,0 +1,91 @@
+flowchart TD
+%% ─────────────────────────────────────────
+%% LAYER 1: THE PANELS (UI)
+%% ─────────────────────────────────────────
+    subgraph UI [USER INTERFACE]
+        direction LR
+        App --> AdminPanel
+        App --> CustomerPanel
+        App --> DeliveryPartnerPanel
+        ControlPanelDisplay --- Validate
+    end
+
+%% ─────────────────────────────────────────
+%% LAYER 2: THE SERVICES (LOGIC)
+%% ─────────────────────────────────────────
+    subgraph Services [BUSINESS LOGIC SERVICES]
+        direction TB
+        subgraph Core_Logic [Core]
+            direction LR
+            AuthService[AuthenticationService]
+            UserService
+            MenuService
+            OrderService
+        end
+        subgraph Helper_Logic [Helpers]
+            direction LR
+            NotificationService
+            PaymentService
+            InvoiceService
+        end
+        subgraph Actor_Logic [Actors]
+            direction LR
+            AdminService
+            CustomerService
+            DeliveryPartnerService
+        end
+    end
+
+%% ─────────────────────────────────────────
+%% LAYER 3: MODELS & FACTORIES (DOMAIN)
+%% ─────────────────────────────────────────
+    subgraph Domain [MODELS & FACTORIES]
+        direction LR
+        subgraph Entities [Entities]
+            direction TB
+            User_Admin_Customer
+            FoodItem_Cuisine
+            Order_Cart_Status
+            Discount_AccountInfo
+        end
+        subgraph Creators [Creation]
+            direction TB
+            UserFactory
+            FoodItemFactory
+            Exceptions
+        end
+    end
+
+%% ─────────────────────────────────────────
+%% LAYER 4: REPOSITORIES (DATA ACCESS)
+%% ─────────────────────────────────────────
+    subgraph Repos [REPOSITORIES]
+        direction LR
+        UserRepo --- CustomerRepo --- DeliveryPartnerRepo --- MenuRepo
+        OrderRepo --- CartRepo --- DiscountRepo --- NotificationRepo
+    end
+
+%% ─────────────────────────────────────────
+%% LAYER 5: DATABASE
+%% ─────────────────────────────────────────
+    subgraph DB_Layer [DATABASE]
+        direction LR
+        DBC[DBConnection Utility]
+        DB[(SQL Persistent Storage)]
+        DBC --- DB
+    end
+
+%% ─────────────────────────────────────────
+%% SYSTEM FLOW & CONNECTIONS
+%% ─────────────────────────────────────────
+    UI ==> Services
+    Services <==> Domain
+    Services ==> Repos
+    Repos ==> DBC
+
+%% Visual Styling
+    style UI fill:#f5f5f5,stroke:#333
+    style Services fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
+    style Domain fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    style Repos fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px
+    style DB_Layer fill:#fff9c4,stroke:#fbc02d,stroke-width:2px

@@ -15,6 +15,10 @@ public class MenuService {
         menuRepo=new MenuRepoImpl();
     }
 
+    public MenuService(MenuRepo menuRepo){
+        this.menuRepo=menuRepo;
+    }
+
     private static class InstanceContainer {
         static MenuService obj = new MenuService();
     }

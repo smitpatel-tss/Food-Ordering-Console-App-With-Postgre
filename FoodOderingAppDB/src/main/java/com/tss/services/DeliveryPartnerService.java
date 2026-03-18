@@ -27,6 +27,15 @@ public class DeliveryPartnerService {
         orderRepo=new OrderRepoImpl();
     }
 
+    public DeliveryPartnerService(DeliveryPartner deliveryPartner, DeliveryPartnerRepo deliveryPartnerRepo, OrderRepo orderRepo, OrderService orderService, UserService userService, NotificationService notificationService) {
+        this.deliveryPartner = deliveryPartner;
+        this.deliveryPartnerRepo = deliveryPartnerRepo;
+        this.orderRepo = orderRepo;
+        this.orderService = orderService;
+        this.userService = userService;
+        this.notificationService = notificationService;
+    }
+
     public DeliveryPartner getDeliveryPartner() {
         return deliveryPartner;
     }

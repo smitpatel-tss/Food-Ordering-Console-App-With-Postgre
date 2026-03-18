@@ -1,4 +1,4 @@
-package com.tss.controllers;
+package com.tss.controlPanels;
 
 import com.tss.exceptions.OrderNotFoundException;
 import com.tss.exceptions.UserNotFoundException;

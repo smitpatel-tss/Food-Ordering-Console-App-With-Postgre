@@ -3,8 +3,6 @@ package com.tss.services;
 import com.tss.exceptions.CartEmptyException;
 import com.tss.exceptions.ItemNotFoundException;
 import com.tss.exceptions.NoDeliveryPartnerAvailable;
-import com.tss.exceptions.UserNotFoundException;
-import com.tss.factory.UserFactory;
 import com.tss.model.*;
 import com.tss.model.users.Customer;
 import com.tss.model.users.User;
@@ -24,8 +22,8 @@ public class CustomerService {
     private InvoiceService invoiceService;
     private UserService userService;
     private NotificationService notificationService;
-    private OrderRepo orderRepo;
     private DeliveryPartnerRepo deliveryPartnerRepo;
+    private OrderRepo orderRepo;
     private DiscountRepo discountRepo;
     private CustomerRepo customerRepo;
     private CartRepo cartRepo;
@@ -40,13 +38,27 @@ public class CustomerService {
         notificationService = NotificationService.getInstance();
 
         orderRepo=new OrderRepoImpl();
-        orderService=OrderService.getInstance();
         deliveryPartnerRepo=new DeliveryPartnerRepoImpl();
+        orderService=OrderService.getInstance();
         discountRepo=new DiscountRepoImpl();
         customerRepo=new CustomerRepoImpl();
         cartRepo=new CartRepoImpl();
     }
 
+    public CustomerService(Customer customer, OrderRepo orderRepo, DeliveryPartnerRepo deliveryPartnerRepo, DiscountRepo discountRepo, CustomerRepo customerRepo, CartRepo cartRepo, OrderService orderService, MenuService menuService, NotificationService notificationService, UserService userService, PaymentService paymentService, InvoiceService invoiceService) {
+        this.customer = customer;
+        this.orderRepo = orderRepo;
+        this.deliveryPartnerRepo = deliveryPartnerRepo;
+        this.discountRepo = discountRepo;
+        this.customerRepo = customerRepo;
+        this.cartRepo = cartRepo;
+        this.orderService = orderService;
+        this.menuService = menuService;
+        this.notificationService = notificationService;
+        this.userService = userService;
+        this.paymentService = paymentService;
+        this.invoiceService = invoiceService;
+    }
     public void welcomeDisplay() {
         System.out.println("\nHii, " + customer.getName() + "\nWelcome!");
     }

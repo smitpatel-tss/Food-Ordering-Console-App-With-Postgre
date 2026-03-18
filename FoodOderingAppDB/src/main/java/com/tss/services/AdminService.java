@@ -19,24 +19,37 @@ public class AdminService {
     private MenuService menuService;
     private UserService userService;
     private NotificationService notificationService;
-    private MenuRepo menuRepo;
     private OrderRepo orderRepo;
     private OrderService orderService;
     private DeliveryPartnerRepo deliveryPartnerRepo;
     private DiscountRepo discountRepo;
     private CustomerRepo customerRepo;
+    private MenuRepo menuRepo;
 
     public AdminService(User admin) {
         this.admin = (Admin) admin;
         this.menuService = MenuService.getInstance();
         userService = UserService.getInstance();
         notificationService = NotificationService.getInstance();
-        menuRepo=new MenuRepoImpl();
         orderRepo=new OrderRepoImpl();
         orderService=OrderService.getInstance();
         deliveryPartnerRepo=new DeliveryPartnerRepoImpl();
         discountRepo=new DiscountRepoImpl();
         customerRepo=new CustomerRepoImpl();
+        menuService=MenuService.getInstance();
+    }
+
+    public AdminService(Admin admin, MenuRepo menuRepo, OrderRepo orderRepo, DeliveryPartnerRepo deliveryPartnerRepo, DiscountRepo discountRepo, CustomerRepo customerRepo, MenuService menuService, OrderService orderService, UserService userService, NotificationService notificationService) {
+        this.admin = admin;
+        this.menuRepo = menuRepo;
+        this.orderRepo = orderRepo;
+        this.deliveryPartnerRepo = deliveryPartnerRepo;
+        this.discountRepo = discountRepo;
+        this.customerRepo = customerRepo;
+        this.menuService = menuService;
+        this.orderService = orderService;
+        this.userService = userService;
+        this.notificationService = notificationService;
     }
 
     public void setAdmin(Admin admin) {

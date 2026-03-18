@@ -1,7 +1,7 @@
 package com.tss.core;
 
 import com.tss.authentication.AccountInfo;
-import com.tss.controllers.*;
+import com.tss.controlPanels.*;
 import com.tss.factory.UserFactory;
 import com.tss.model.users.Admin;
 import com.tss.model.users.UserType;

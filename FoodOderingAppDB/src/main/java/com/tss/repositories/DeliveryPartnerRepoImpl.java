@@ -220,15 +220,20 @@ public class DeliveryPartnerRepoImpl implements DeliveryPartnerRepo {
             }
 
             connection.commit();
-            connection.setAutoCommit(true);
         } catch (SQLException e) {
             try {
                 connection.rollback();
-                connection.setAutoCommit(true);
             } catch (SQLException ex) {
                 System.out.println(ex.getMessage());
             }
             System.out.println(e.getMessage());
+        } finally {
+            try {
+                connection.setAutoCommit(true);
+
+            } catch (SQLException e) {
+                System.out.println(e.getMessage());
+            }
         }
     }
 

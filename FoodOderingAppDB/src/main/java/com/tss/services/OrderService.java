@@ -25,6 +25,14 @@ public class OrderService {
         discountRepo=new DiscountRepoImpl();
     }
 
+    public OrderService(NotificationService notificationService, OrderRepo orderRepo, DeliveryPartnerRepo deliveryPartnerRepo, CartRepo cartRepo, DiscountRepo discountRepo) {
+        this.notificationService = notificationService;
+        this.orderRepo = orderRepo;
+        this.deliveryPartnerRepo = deliveryPartnerRepo;
+        this.cartRepo = cartRepo;
+        this.discountRepo = discountRepo;
+    }
+
     private static class InstanceContainer {
         static OrderService obj = new OrderService();
     }

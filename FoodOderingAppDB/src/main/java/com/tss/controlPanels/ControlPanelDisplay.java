@@ -1,4 +1,4 @@
-package com.tss.controllers;
+package com.tss.controlPanels;
 
 public class ControlPanelDisplay {
     public static void displayMainMenu() {

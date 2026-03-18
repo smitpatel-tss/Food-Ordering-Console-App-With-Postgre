@@ -11,6 +11,10 @@ public class NotificationService {
 
     private NotificationRepo notificationRepo;
 
+    public NotificationService(NotificationRepo notificationRepo) {
+        this.notificationRepo = notificationRepo;
+    }
+
 
     private NotificationService() {
         notificationRepo=new NotificationRepoImpl();

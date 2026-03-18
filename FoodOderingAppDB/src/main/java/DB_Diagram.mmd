@@ -1,0 +1,111 @@
+erDiagram
+    USERS ||--|| ADMIN : "extends"
+    USERS ||--|| CUSTOMER : "extends"
+    USERS ||--|| DELIVERY_PARTNER : "extends"
+    USERS ||--o{ NOTIFICATION : "receives"
+
+    CUISINE ||--o{ FOOD_ITEM : "contains"
+
+    CUSTOMER ||--|| CARTS : "owns"
+    CARTS ||--o{ CART_ITEMS : "has"
+    FOOD_ITEM ||--o{ CART_ITEMS : "added_to"
+
+    CUSTOMER ||--o{ ORDERS : "places"
+    PRICE_DISCOUNT ||--o{ ORDERS : "applied_to"
+    ORDERS ||--o{ ORDER_ITEMS : "consists_of"
+    FOOD_ITEM ||--o{ ORDER_ITEMS : "included_in"
+
+    ORDERS ||--o{ ORDER_ASSIGNMENT : "assigned"
+    DELIVERY_PARTNER ||--o{ ORDER_ASSIGNMENT : "handles"
+
+    USERS {
+        bigserial user_id PK
+        varchar name
+        bigint phone
+        varchar password
+        user_type user_type
+        timestamp created_at
+        bigint total_seen_notifications
+    }
+
+    ADMIN {
+        bigint user_id PK, FK
+    }
+
+    CUSTOMER {
+        bigint user_id PK, FK
+        text address
+    }
+
+    DELIVERY_PARTNER {
+        bigint user_id PK, FK
+        boolean is_available
+        boolean is_active
+        timestamp last_delivery_at
+    }
+
+    CUISINE {
+        bigserial cuisine_id PK
+        varchar name
+        timestamp created_at
+    }
+
+    FOOD_ITEM {
+        bigserial food_item_id PK
+        bigint cuisine_id FK
+        varchar name
+        numeric price
+        boolean available
+        timestamp created_at
+    }
+
+    CARTS {
+        bigserial cart_id PK
+        bigint user_id FK
+    }
+
+    CART_ITEMS {
+        bigserial id PK
+        bigint cart_id FK
+        bigint food_item_id FK
+        int quantity
+    }
+
+    ORDERS {
+        bigserial order_id PK
+        bigint customer_id FK
+        numeric final_amount
+        order_status status
+        payment_mode_type payment_mode
+        int discount_id FK
+        timestamp placed_at
+        timestamp delivered_at
+    }
+
+    ORDER_ITEMS {
+        bigserial order_item_id PK
+        bigint order_id FK
+        bigint food_item_id FK
+        int quantity
+        numeric price
+    }
+
+    ORDER_ASSIGNMENT {
+        bigint order_id PK, FK
+        bigint delivery_partner_id PK, FK
+        timestamp created_at
+    }
+
+    PRICE_DISCOUNT {
+        serial discount_id PK
+        numeric minimum_amount
+        numeric discount_percentage
+    }
+
+    NOTIFICATION {
+        bigserial notification_id PK
+        bigint user_id FK
+        user_type sender
+        text message
+        user_type receiver
+    }
